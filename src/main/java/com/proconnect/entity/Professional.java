@@ -1,0 +1,117 @@
+package com.proconnect.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Entity
+@Table(name = "professionals")
+@Data
+public class Professional {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+    
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+    
+    @Column(name = "display_name")
+    private String displayName;
+    
+    @Column(nullable = false)
+    private String headline;
+    
+    @Column(length = 10000)
+    private String bio;
+    
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+    
+    @Column(name = "cover_image_url")
+    private String coverImageUrl;
+    
+    @Column(nullable = false)
+    private String city;
+    
+    @Column(nullable = false)
+    private String state;
+    
+    @Column(nullable = false)
+    private String country;
+    
+    @Column(nullable = false)
+    private Boolean remote = false;
+    
+    @Column(name = "is_verified")
+    private Boolean isVerified = false;
+    
+    @Column(name = "is_available")
+    private Boolean isAvailable = true;
+    
+    @Column(precision = 3, scale = 2)
+    private BigDecimal rating;
+    
+    @Column(name = "review_count")
+    private Integer reviewCount = 0;
+    
+    @Column(name = "hourly_rate_min", precision = 10, scale = 2)
+    private BigDecimal hourlyRateMin;
+    
+    @Column(name = "hourly_rate_max", precision = 10, scale = 2)
+    private BigDecimal hourlyRateMax;
+    
+    @Column(length = 3)
+    private String currency = "USD";
+
+    // Contact info
+    @Column(length = 100)
+    private String email;
+
+    @Column(length = 30)
+    private String phone;
+
+    @Column(length = 30)
+    private String whatsapp;
+
+    // Primary service category
+    @Column(length = 100)
+    private String category;
+    
+    @ManyToMany
+    @JoinTable(
+        name = "professional_skills",
+        joinColumns = @JoinColumn(name = "professional_id"),
+        inverseJoinColumns = @JoinColumn(name = "skill_id")
+    )
+    private Set<Skill> skills = new HashSet<>();
+    
+    @OneToMany(mappedBy = "professional", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ServiceOffering> services = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "professional", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SocialLink> socialLinks = new ArrayList<>();
+    
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+}
