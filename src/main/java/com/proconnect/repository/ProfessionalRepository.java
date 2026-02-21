@@ -24,7 +24,8 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
 
     /**
      * Primary FTS search using search_vector with ts_rank scoring.
-     * Falls back to trigram similarity on name/city when query is blank.
+     * Falls back to trigram similarity on headline/category/subcategory names when
+     * the FTS query matches nothing (handles typos like "plimber" → "plumber").
      */
     @Query(nativeQuery = true, value = """
         SELECT DISTINCT p.*,
@@ -36,7 +37,14 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
         LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
         WHERE 1=1
-          AND (:query     IS NULL OR :query     = '' OR p.search_vector @@ plainto_tsquery('english', :query))
+          AND (
+              :query IS NULL OR :query = ''
+              OR p.search_vector @@ plainto_tsquery('english', :query)
+              OR similarity(p.headline,  :query) > 0.2
+              OR similarity(p.category,  :query) > 0.2
+              OR similarity(coalesce(p.bio,''), :query) > 0.15
+              OR similarity(coalesce(sc.name,''), :query) > 0.3
+          )
           AND (:city      IS NULL OR :city      = '' OR similarity(p.city,    :city)    > 0.25)
           AND (:state     IS NULL OR :state     = '' OR LOWER(p.state)    = LOWER(:state))
           AND (:country   IS NULL OR :country   = '' OR LOWER(p.country)  = LOWER(:country))
@@ -65,7 +73,14 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
         LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
         WHERE 1=1
-          AND (:query     IS NULL OR :query     = '' OR p.search_vector @@ plainto_tsquery('english', :query))
+          AND (
+              :query IS NULL OR :query = ''
+              OR p.search_vector @@ plainto_tsquery('english', :query)
+              OR similarity(p.headline,  :query) > 0.2
+              OR similarity(p.category,  :query) > 0.2
+              OR similarity(coalesce(p.bio,''), :query) > 0.15
+              OR similarity(coalesce(sc.name,''), :query) > 0.3
+          )
           AND (:city      IS NULL OR :city      = '' OR similarity(p.city,    :city)    > 0.25)
           AND (:state     IS NULL OR :state     = '' OR LOWER(p.state)    = LOWER(:state))
           AND (:country   IS NULL OR :country   = '' OR LOWER(p.country)  = LOWER(:country))
@@ -94,7 +109,13 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         JOIN professional_subcategories ps ON ps.professional_id = p.id
         JOIN subcategories sc               ON sc.id = ps.subcategory_id
         WHERE LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[])
-          AND (:query     IS NULL OR :query     = '' OR p.search_vector @@ plainto_tsquery('english', :query))
+          AND (
+              :query IS NULL OR :query = ''
+              OR p.search_vector @@ plainto_tsquery('english', :query)
+              OR similarity(p.headline, :query) > 0.2
+              OR similarity(p.category, :query) > 0.2
+              OR similarity(coalesce(sc.name,''), :query) > 0.3
+          )
           AND (:city      IS NULL OR :city      = '' OR similarity(p.city, :city) > 0.25)
           AND (:available IS NULL OR p.is_available = :available)
         ORDER BY rank DESC, p.rating DESC NULLS LAST
