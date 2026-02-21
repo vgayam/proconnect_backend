@@ -186,14 +186,14 @@ DECLARE
     counter    INT := 0;
 BEGIN
     IF NEW.slug IS NULL OR NEW.slug = '' THEN
-        base_slug := lower(
-            regexp_replace(
+        base_slug := regexp_replace(
+            lower(
                 unaccent(
                     coalesce(NEW.first_name,'') || '-' || coalesce(NEW.last_name,'') ||
                     '-' || coalesce(NEW.category,'') || '-' || coalesce(NEW.city,'')
-                ),
-                '[^a-z0-9]+', '-', 'g'
-            )
+                )
+            ),
+            '[^a-z0-9]+', '-', 'g'
         );
         base_slug  := trim(both '-' from base_slug);
         final_slug := base_slug;
