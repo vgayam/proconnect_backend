@@ -7,6 +7,7 @@ import com.proconnect.service.ContactService;
 import com.proconnect.service.ProfessionalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/professionals")
 @RequiredArgsConstructor
+@Slf4j
 public class ProfessionalController {
 
     private final ProfessionalService professionalService;
@@ -42,6 +44,8 @@ public class ProfessionalController {
         @RequestParam(defaultValue = "0")                   int          page,
         @RequestParam(defaultValue = "10")                  int          pageSize
     ) {
+        log.info("GET /api/professionals — q={}, city={}, state={}, country={}, remote={}, available={}, subcategories={}, skills={}, categories={}, category={}, page={}, pageSize={}",
+            q, city, state, country, remote, available, subcategories, skills, categories, category, page, pageSize);
         // Normalise: single ?category=X and ?location=X are aliases for the list/city params
         String effectiveCity = (city != null && !city.isBlank()) ? city
                              : (location != null && !location.isBlank()) ? location : null;
@@ -60,17 +64,22 @@ public class ProfessionalController {
     /** Look up a professional by numeric ID */
     @GetMapping("/{id}")
     public ResponseEntity<ProfessionalDTO> getProfessionalById(@PathVariable Long id) {
+        log.info("GET /api/professionals/{}", id);
         return ResponseEntity.ok(professionalService.getProfessionalById(id));
     }
 
     /** Look up a professional by URL slug */
     @GetMapping("/slug/{slug}")
     public ResponseEntity<ProfessionalDTO> getProfessionalBySlug(@PathVariable String slug) {
+        log.info("GET /api/professionals/slug/{}", slug);
         return ResponseEntity.ok(professionalService.getProfessionalBySlug(slug));
     }
 
     @PostMapping
     public ResponseEntity<ProfessionalDTO> createProfessional(@Valid @RequestBody ProfessionalDTO dto) {
+        log.info("POST /api/professionals — name={} {}, email={}, category={}, city={}",
+            dto.getFirstName(), dto.getLastName(), dto.getEmail(), dto.getCategory(),
+            dto.getLocation() != null ? dto.getLocation().getCity() : null);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(professionalService.createProfessional(dto));
     }
@@ -80,11 +89,13 @@ public class ProfessionalController {
         @PathVariable Long id,
         @Valid @RequestBody ProfessionalDTO dto
     ) {
+        log.info("PUT /api/professionals/{}", id);
         return ResponseEntity.ok(professionalService.updateProfessional(id, dto));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProfessional(@PathVariable Long id) {
+        log.info("DELETE /api/professionals/{}", id);
         professionalService.deleteProfessional(id);
         return ResponseEntity.noContent().build();
     }
@@ -94,12 +105,14 @@ public class ProfessionalController {
         @PathVariable Long id,
         @Valid @RequestBody ContactMessageDTO dto
     ) {
+        log.info("POST /api/professionals/{}/contact — from={} <{}>", id, dto.getName(), dto.getEmail());
         contactService.sendContactMessage(id, dto);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/cities")
     public ResponseEntity<List<String>> getDistinctCities() {
+        log.info("GET /api/professionals/cities");
         return ResponseEntity.ok(professionalService.getDistinctCities());
     }
 }
