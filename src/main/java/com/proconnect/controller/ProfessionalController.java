@@ -30,19 +30,31 @@ public class ProfessionalController {
     public ResponseEntity<SearchResultDTO> getAllProfessionals(
         @RequestParam(required = false)                     String       q,
         @RequestParam(required = false)                     String       city,
+        @RequestParam(required = false)                     String       location,    // alias for city
         @RequestParam(required = false)                     String       state,
         @RequestParam(required = false)                     String       country,
         @RequestParam(required = false)                     Boolean      remote,
         @RequestParam(required = false)                     Boolean      available,
         @RequestParam(required = false)                     List<String> subcategories,
         @RequestParam(required = false)                     List<String> skills,      // legacy alias
-        @RequestParam(required = false)                     List<String> categories,
+        @RequestParam(required = false)                     List<String> categories,  // multi-value
+        @RequestParam(required = false)                     String       category,    // single-value alias
         @RequestParam(defaultValue = "0")                   int          page,
         @RequestParam(defaultValue = "10")                  int          pageSize
     ) {
+        // Normalise: single ?category=X and ?location=X are aliases for the list/city params
+        String effectiveCity = (city != null && !city.isBlank()) ? city
+                             : (location != null && !location.isBlank()) ? location : null;
+
+        List<String> effectiveCategories = categories;
+        if ((effectiveCategories == null || effectiveCategories.isEmpty())
+                && category != null && !category.isBlank()) {
+            effectiveCategories = List.of(category);
+        }
+
         return ResponseEntity.ok(professionalService.searchProfessionals(
-            q, city, state, country, remote, available,
-            subcategories, skills, categories, page, pageSize));
+            q, effectiveCity, state, country, remote, available,
+            subcategories, skills, effectiveCategories, page, pageSize));
     }
 
     /** Look up a professional by numeric ID */
