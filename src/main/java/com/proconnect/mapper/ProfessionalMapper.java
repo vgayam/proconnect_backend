@@ -3,30 +3,30 @@ package com.proconnect.mapper;
 import com.proconnect.dto.*;
 import com.proconnect.entity.Professional;
 import com.proconnect.entity.ServiceOffering;
-import com.proconnect.entity.Skill;
+import com.proconnect.entity.Subcategory;
 import com.proconnect.entity.SocialLink;
-import com.proconnect.repository.SkillRepository;
+import com.proconnect.repository.SubcategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class ProfessionalMapper {
-    
-    private final SkillRepository skillRepository;
-    
+
+    private final SubcategoryRepository subcategoryRepository;
+
     public ProfessionalDTO toDTO(Professional entity) {
-        if (entity == null) {
-            return null;
-        }
-        
+        if (entity == null) return null;
+
         ProfessionalDTO dto = new ProfessionalDTO();
         dto.setId(entity.getId());
         dto.setFirstName(entity.getFirstName());
         dto.setLastName(entity.getLastName());
         dto.setDisplayName(entity.getDisplayName());
+        dto.setSlug(entity.getSlug());
         dto.setHeadline(entity.getHeadline());
         dto.setBio(entity.getBio());
         dto.setAvatarUrl(entity.getAvatarUrl());
@@ -42,31 +42,33 @@ public class ProfessionalMapper {
         dto.setPhone(entity.getPhone());
         dto.setWhatsapp(entity.getWhatsapp());
         dto.setCategory(entity.getCategory());
-        
+
         dto.setLocation(toLocationDTO(entity));
-        dto.setSkills(entity.getSkills().stream()
-            .map(this::toSkillDTO)
-            .collect(Collectors.toList()));
+
+        List<SubcategoryDTO> subcategoryDTOs = entity.getSubcategories().stream()
+            .map(this::toSubcategoryDTO)
+            .collect(Collectors.toList());
+        dto.setSubcategories(subcategoryDTOs);
+        // backward-compat alias
+        dto.setSkills(subcategoryDTOs);
+
         dto.setServices(entity.getServices().stream()
             .map(this::toServiceDTO)
             .collect(Collectors.toList()));
         dto.setSocialLinks(entity.getSocialLinks().stream()
             .map(this::toSocialLinkDTO)
             .collect(Collectors.toList()));
-        
+
         return dto;
     }
-    
+
     public Professional toEntity(ProfessionalDTO dto) {
-        if (dto == null) {
-            return null;
-        }
-        
+        if (dto == null) return null;
         Professional entity = new Professional();
         updateEntityFromDTO(entity, dto);
         return entity;
     }
-    
+
     public void updateEntityFromDTO(Professional entity, ProfessionalDTO dto) {
         entity.setFirstName(dto.getFirstName());
         entity.setLastName(dto.getLastName());
@@ -84,13 +86,18 @@ public class ProfessionalMapper {
         entity.setPhone(dto.getPhone());
         entity.setWhatsapp(dto.getWhatsapp());
         entity.setCategory(dto.getCategory());
-        
+
         updateLocationFromDTO(entity, dto.getLocation());
-        updateSkillsFromDTO(entity, dto.getSkills());
+
+        // Prefer explicit subcategories field; fall back to legacy skills field
+        List<SubcategoryDTO> subcats = dto.getSubcategories() != null ? dto.getSubcategories() : dto.getSkills();
+        updateSubcategoriesFromDTO(entity, subcats);
         updateServicesFromDTO(entity, dto.getServices());
         updateSocialLinksFromDTO(entity, dto.getSocialLinks());
     }
-    
+
+    // ── private helpers ────────────────────────────────────────────────────
+
     private ProfessionalDTO.LocationDTO toLocationDTO(Professional entity) {
         ProfessionalDTO.LocationDTO location = new ProfessionalDTO.LocationDTO();
         location.setCity(entity.getCity());
@@ -99,11 +106,11 @@ public class ProfessionalMapper {
         location.setRemote(entity.getRemote());
         return location;
     }
-    
-    private SkillDTO toSkillDTO(Skill skill) {
-        return new SkillDTO(skill.getId(), skill.getName(), skill.getCategory());
+
+    private SubcategoryDTO toSubcategoryDTO(Subcategory subcategory) {
+        return new SubcategoryDTO(subcategory.getId(), subcategory.getName(), subcategory.getCategory());
     }
-    
+
     private ServiceDTO toServiceDTO(ServiceOffering service) {
         ServiceDTO dto = new ServiceDTO();
         dto.setId(service.getId());
@@ -116,11 +123,11 @@ public class ProfessionalMapper {
         dto.setDuration(service.getDuration());
         return dto;
     }
-    
+
     private SocialLinkDTO toSocialLinkDTO(SocialLink link) {
         return new SocialLinkDTO(link.getId(), link.getPlatform(), link.getUrl(), link.getLabel());
     }
-    
+
     private void updateLocationFromDTO(Professional entity, ProfessionalDTO.LocationDTO location) {
         if (location != null) {
             entity.setCity(location.getCity());
@@ -129,26 +136,24 @@ public class ProfessionalMapper {
             entity.setRemote(location.getRemote());
         }
     }
-    
-    private void updateSkillsFromDTO(Professional entity, java.util.List<SkillDTO> skillDTOs) {
-        if (skillDTOs != null) {
-            entity.getSkills().clear();
-            if (!skillDTOs.isEmpty()) {
-                for (SkillDTO skillDTO : skillDTOs) {
-                    Skill skill = skillRepository.findByName(skillDTO.getName())
-                        .orElseGet(() -> {
-                            Skill newSkill = new Skill();
-                            newSkill.setName(skillDTO.getName());
-                            newSkill.setCategory(skillDTO.getCategory());
-                            return skillRepository.save(newSkill);
-                        });
-                    entity.getSkills().add(skill);
-                }
+
+    private void updateSubcategoriesFromDTO(Professional entity, List<SubcategoryDTO> subcategoryDTOs) {
+        if (subcategoryDTOs != null) {
+            entity.getSubcategories().clear();
+            for (SubcategoryDTO subcatDTO : subcategoryDTOs) {
+                Subcategory subcategory = subcategoryRepository.findByName(subcatDTO.getName())
+                    .orElseGet(() -> {
+                        Subcategory newSubcat = new Subcategory();
+                        newSubcat.setName(subcatDTO.getName());
+                        newSubcat.setCategory(subcatDTO.getCategory());
+                        return subcategoryRepository.save(newSubcat);
+                    });
+                entity.getSubcategories().add(subcategory);
             }
         }
     }
-    
-    private void updateServicesFromDTO(Professional entity, java.util.List<ServiceDTO> serviceDTOs) {
+
+    private void updateServicesFromDTO(Professional entity, List<ServiceDTO> serviceDTOs) {
         if (serviceDTOs != null && !serviceDTOs.isEmpty()) {
             entity.getServices().clear();
             for (ServiceDTO serviceDTO : serviceDTOs) {
@@ -165,8 +170,8 @@ public class ProfessionalMapper {
             }
         }
     }
-    
-    private void updateSocialLinksFromDTO(Professional entity, java.util.List<SocialLinkDTO> linkDTOs) {
+
+    private void updateSocialLinksFromDTO(Professional entity, List<SocialLinkDTO> linkDTOs) {
         if (linkDTOs != null && !linkDTOs.isEmpty()) {
             entity.getSocialLinks().clear();
             for (SocialLinkDTO linkDTO : linkDTOs) {

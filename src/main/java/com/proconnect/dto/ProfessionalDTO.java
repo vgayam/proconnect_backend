@@ -15,6 +15,7 @@ public class ProfessionalDTO {
     private String firstName;
     private String lastName;
     private String displayName;
+    private String slug;
     private String headline;
     private String bio;
     private String avatarUrl;
@@ -31,10 +32,13 @@ public class ProfessionalDTO {
     private String phone;
     private String whatsapp;
     private String category;
-    private List<SkillDTO> skills;
+    /** Subcategories (formerly skills) */
+    private List<SubcategoryDTO> subcategories;
+    /** Kept for backwards compatibility with existing frontend */
+    private List<SubcategoryDTO> skills;
     private List<ServiceDTO> services;
     private List<SocialLinkDTO> socialLinks;
-    
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

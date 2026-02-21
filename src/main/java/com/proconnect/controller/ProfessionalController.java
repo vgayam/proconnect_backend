@@ -2,6 +2,7 @@ package com.proconnect.controller;
 
 import com.proconnect.dto.ContactMessageDTO;
 import com.proconnect.dto.ProfessionalDTO;
+import com.proconnect.dto.SearchResultDTO;
 import com.proconnect.service.ContactService;
 import com.proconnect.service.ProfessionalService;
 import jakarta.validation.Valid;
@@ -16,41 +17,52 @@ import java.util.List;
 @RequestMapping("/api/professionals")
 @RequiredArgsConstructor
 public class ProfessionalController {
-    
+
     private final ProfessionalService professionalService;
     private final ContactService contactService;
-    
+
+    /**
+     * Search / list professionals.
+     * Returns a paginated {@link SearchResultDTO} with facets.
+     * Accepts both "subcategories" (new) and "skills" (legacy alias) params.
+     */
     @GetMapping
-    public ResponseEntity<List<ProfessionalDTO>> getAllProfessionals(
-        @RequestParam(required = false) String q,
-        @RequestParam(required = false) String city,
-        @RequestParam(required = false) String state,
-        @RequestParam(required = false) String country,
-        @RequestParam(required = false) Boolean remote,
-        @RequestParam(required = false) Boolean available,
-        @RequestParam(required = false) List<String> skills,
-        @RequestParam(required = false) List<String> categories
+    public ResponseEntity<SearchResultDTO> getAllProfessionals(
+        @RequestParam(required = false)                     String       q,
+        @RequestParam(required = false)                     String       city,
+        @RequestParam(required = false)                     String       state,
+        @RequestParam(required = false)                     String       country,
+        @RequestParam(required = false)                     Boolean      remote,
+        @RequestParam(required = false)                     Boolean      available,
+        @RequestParam(required = false)                     List<String> subcategories,
+        @RequestParam(required = false)                     List<String> skills,      // legacy alias
+        @RequestParam(required = false)                     List<String> categories,
+        @RequestParam(defaultValue = "0")                   int          page,
+        @RequestParam(defaultValue = "10")                  int          pageSize
     ) {
-        if (q != null || city != null || state != null || country != null || remote != null || 
-            available != null || (skills != null && !skills.isEmpty()) || 
-            (categories != null && !categories.isEmpty())) {
-            return ResponseEntity.ok(professionalService.searchProfessionals(
-                q, city, state, country, remote, available, skills, categories));
-        }
-        return ResponseEntity.ok(professionalService.getAllProfessionals());
+        return ResponseEntity.ok(professionalService.searchProfessionals(
+            q, city, state, country, remote, available,
+            subcategories, skills, categories, page, pageSize));
     }
-    
+
+    /** Look up a professional by numeric ID */
     @GetMapping("/{id}")
     public ResponseEntity<ProfessionalDTO> getProfessionalById(@PathVariable Long id) {
         return ResponseEntity.ok(professionalService.getProfessionalById(id));
     }
-    
+
+    /** Look up a professional by URL slug */
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<ProfessionalDTO> getProfessionalBySlug(@PathVariable String slug) {
+        return ResponseEntity.ok(professionalService.getProfessionalBySlug(slug));
+    }
+
     @PostMapping
     public ResponseEntity<ProfessionalDTO> createProfessional(@Valid @RequestBody ProfessionalDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(professionalService.createProfessional(dto));
     }
-    
+
     @PutMapping("/{id}")
     public ResponseEntity<ProfessionalDTO> updateProfessional(
         @PathVariable Long id,
@@ -58,13 +70,13 @@ public class ProfessionalController {
     ) {
         return ResponseEntity.ok(professionalService.updateProfessional(id, dto));
     }
-    
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProfessional(@PathVariable Long id) {
         professionalService.deleteProfessional(id);
         return ResponseEntity.noContent().build();
     }
-    
+
     @PostMapping("/{id}/contact")
     public ResponseEntity<Void> contactProfessional(
         @PathVariable Long id,

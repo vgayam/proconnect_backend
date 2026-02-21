@@ -15,26 +15,39 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ProfessionalService {
-    
+
     private final ProfessionalRepository professionalRepository;
     private final ProfessionalMapper professionalMapper;
     private final ProfessionalSearchService searchService;
-    
+
     public List<ProfessionalDTO> getAllProfessionals() {
         return professionalRepository.findAll().stream()
             .map(professionalMapper::toDTO)
             .collect(Collectors.toList());
     }
-    
+
     public ProfessionalDTO getProfessionalById(Long id) {
         Professional professional = professionalRepository.findById(id)
             .orElseThrow(() -> ResourceNotFoundException.professionalNotFound(id));
         return professionalMapper.toDTO(professional);
     }
-    
-    public List<ProfessionalDTO> searchProfessionals(String query, String city, String state, 
-                                                      String country, Boolean remote, Boolean available, 
-                                                      List<String> skills, List<String> categories) {
+
+    public ProfessionalDTO getProfessionalBySlug(String slug) {
+        Professional professional = professionalRepository.findBySlug(slug)
+            .orElseThrow(() -> new ResourceNotFoundException("Professional not found with slug: " + slug));
+        return professionalMapper.toDTO(professional);
+    }
+
+    /**
+     * Unified search — returns a paginated {@link SearchResultDTO} with facets.
+     * Accepts both "subcategories" (new) and "skills" (legacy alias).
+     */
+    public SearchResultDTO searchProfessionals(
+        String query, String city, String state, String country,
+        Boolean remote, Boolean available,
+        List<String> subcategories, List<String> skills,
+        List<String> categories, int page, int pageSize
+    ) {
         ProfessionalSearchCriteria criteria = ProfessionalSearchCriteria.builder()
             .query(query)
             .city(city)
@@ -42,39 +55,40 @@ public class ProfessionalService {
             .country(country)
             .remote(remote)
             .available(available)
+            .subcategories(subcategories)
             .skills(skills)
             .categories(categories)
+            .page(page)
+            .pageSize(pageSize)
             .build();
-        
-        return searchService.search(criteria).stream()
-            .map(professionalMapper::toDTO)
-            .collect(Collectors.toList());
+
+        return searchService.search(criteria);
     }
-    
+
     @Transactional
     public ProfessionalDTO createProfessional(ProfessionalDTO dto) {
         Professional professional = professionalMapper.toEntity(dto);
         Professional saved = professionalRepository.save(professional);
         return professionalMapper.toDTO(saved);
     }
-    
+
     @Transactional
     public ProfessionalDTO updateProfessional(Long id, ProfessionalDTO dto) {
         Professional professional = professionalRepository.findById(id)
             .orElseThrow(() -> ResourceNotFoundException.professionalNotFound(id));
-        
+
         professionalMapper.updateEntityFromDTO(professional, dto);
         Professional updated = professionalRepository.save(professional);
         return professionalMapper.toDTO(updated);
     }
-    
+
     public void deleteProfessional(Long id) {
         if (!professionalRepository.existsById(id)) {
             throw ResourceNotFoundException.professionalNotFound(id);
         }
         professionalRepository.deleteById(id);
     }
-    
+
     public List<String> getDistinctCities() {
         return professionalRepository.findDistinctCities();
     }
