@@ -53,10 +53,10 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
           AND (
               :query IS NULL OR :query = ''
               OR p.search_vector @@ plainto_tsquery('english', :query)
-              OR word_similarity(:query, p.headline)           > 0.3
-              OR word_similarity(:query, p.category)           > 0.3
-              OR word_similarity(:query, coalesce(p.bio,''))   > 0.25
-              OR word_similarity(:query, coalesce(sc.name,'')) > 0.3
+              OR word_similarity(:query, p.headline)           > 0.45
+              OR word_similarity(:query, p.category)           > 0.45
+              OR word_similarity(:query, coalesce(p.bio,''))   > 0.4
+              OR word_similarity(:query, coalesce(sc.name,'')) > 0.45
           )
           AND (:city             IS NULL OR :city    = '' OR word_similarity(:city,   p.city)   > 0.4)
           AND (:state            IS NULL OR :state   = '' OR LOWER(p.state)   = LOWER(:state))
@@ -97,10 +97,10 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
           AND (
               :query IS NULL OR :query = ''
               OR p.search_vector @@ plainto_tsquery('english', :query)
-              OR word_similarity(:query, p.headline)           > 0.3
-              OR word_similarity(:query, p.category)           > 0.3
-              OR word_similarity(:query, coalesce(p.bio,''))   > 0.25
-              OR word_similarity(:query, coalesce(sc.name,'')) > 0.3
+              OR word_similarity(:query, p.headline)           > 0.45
+              OR word_similarity(:query, p.category)           > 0.45
+              OR word_similarity(:query, coalesce(p.bio,''))   > 0.4
+              OR word_similarity(:query, coalesce(sc.name,'')) > 0.45
           )
           AND (:city              IS NULL OR :city     = '' OR word_similarity(:city,  p.city)   > 0.4)
           AND (:state             IS NULL OR :state    = '' OR LOWER(p.state)    = LOWER(:state))
