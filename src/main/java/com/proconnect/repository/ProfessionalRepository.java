@@ -44,8 +44,7 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
      *   :subcategoryNames — pg text-array literal e.g. '{plumbing,tiling}' — NULL = no filter
      */
     @Query(nativeQuery = true, value = """
-        SELECT DISTINCT p.*,
-               COALESCE(ts_rank(p.search_vector, plainto_tsquery('english', COALESCE(:query,''))), 0.0) AS rank
+        SELECT p.*
         FROM professionals p
         LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
         LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
@@ -54,10 +53,10 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
           AND (
               :query IS NULL OR :query = ''
               OR p.search_vector @@ plainto_tsquery('english', :query)
-              OR similarity(p.headline,              :query) > 0.2
-              OR similarity(p.category,              :query) > 0.2
-              OR similarity(coalesce(p.bio,''),      :query) > 0.15
-              OR similarity(coalesce(sc.name,''),    :query) > 0.3
+              OR similarity(p.headline,           :query) > 0.15
+              OR similarity(p.category,           :query) > 0.15
+              OR similarity(coalesce(p.bio,''),   :query) > 0.1
+              OR similarity(coalesce(sc.name,''), :query) > 0.2
           )
           AND (:city             IS NULL OR :city    = '' OR similarity(p.city,   :city)   > 0.25)
           AND (:state            IS NULL OR :state   = '' OR LOWER(p.state)   = LOWER(:state))
@@ -65,9 +64,12 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
           AND (:remote           IS NULL OR p.remote       = :remote)
           AND (:available        IS NULL OR p.is_available = :available)
           AND (:category         IS NULL OR :category = '' OR LOWER(p.category) = LOWER(:category))
-          AND (:area             IS NULL OR :area    = '' OR similarity(LOWER(psa.area_name), LOWER(:area)) > 0.25)
+          AND (:area             IS NULL OR :area    = '' OR similarity(LOWER(psa.area_name), LOWER(:area)) > 0.2)
           AND (:subcategoryNames IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
-        ORDER BY rank DESC, p.rating DESC NULLS LAST
+        GROUP BY p.id
+        ORDER BY
+          MAX(COALESCE(ts_rank(p.search_vector, plainto_tsquery('english', COALESCE(:query,''))), 0.0)) DESC,
+          p.rating DESC NULLS LAST
         LIMIT :pageSize OFFSET :offset
         """)
     List<Professional> searchProfessionals(
