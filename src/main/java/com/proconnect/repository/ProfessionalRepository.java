@@ -45,10 +45,7 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
      */
     @Query(nativeQuery = true, value = """
         SELECT DISTINCT p.*,
-               CASE WHEN :query IS NOT NULL AND :query <> ''
-                    THEN ts_rank(p.search_vector, plainto_tsquery('english', :query))
-                    ELSE 0.0
-               END AS rank
+               COALESCE(ts_rank(p.search_vector, plainto_tsquery('english', COALESCE(:query,''))), 0.0) AS rank
         FROM professionals p
         LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
         LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
@@ -62,14 +59,14 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
               OR similarity(coalesce(p.bio,''),      :query) > 0.15
               OR similarity(coalesce(sc.name,''),    :query) > 0.3
           )
-          AND (:city              IS NULL OR :city     = '' OR similarity(p.city,    :city)    > 0.25)
-          AND (:state             IS NULL OR :state    = '' OR LOWER(p.state)    = LOWER(:state))
-          AND (:country           IS NULL OR :country  = '' OR LOWER(p.country)  = LOWER(:country))
-          AND (:remote            IS NULL OR p.remote            = :remote)
-          AND (:available         IS NULL OR p.is_available      = :available)
-          AND (:category          IS NULL OR :category = '' OR LOWER(p.category) = LOWER(:category))
-          AND (:area              IS NULL OR :area     = '' OR similarity(LOWER(psa.area_name), LOWER(:area)) > 0.25)
-          AND (:subcategoryNames  IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
+          AND (:city             IS NULL OR :city    = '' OR similarity(p.city,   :city)   > 0.25)
+          AND (:state            IS NULL OR :state   = '' OR LOWER(p.state)   = LOWER(:state))
+          AND (:country          IS NULL OR :country = '' OR LOWER(p.country) = LOWER(:country))
+          AND (:remote           IS NULL OR p.remote       = :remote)
+          AND (:available        IS NULL OR p.is_available = :available)
+          AND (:category         IS NULL OR :category = '' OR LOWER(p.category) = LOWER(:category))
+          AND (:area             IS NULL OR :area    = '' OR similarity(LOWER(psa.area_name), LOWER(:area)) > 0.25)
+          AND (:subcategoryNames IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
         ORDER BY rank DESC, p.rating DESC NULLS LAST
         LIMIT :pageSize OFFSET :offset
         """)
@@ -156,10 +153,11 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
     // ─────────────────────────────────────────────────────────────────────────
 
     @Query(nativeQuery = true, value = """
-        SELECT DISTINCT psa.area_name
+        SELECT psa.area_name
         FROM professional_service_areas psa
         WHERE similarity(LOWER(psa.area_name), LOWER(:hint)) > 0.25
-        ORDER BY similarity(LOWER(psa.area_name), LOWER(:hint)) DESC
+        GROUP BY psa.area_name
+        ORDER BY MAX(similarity(LOWER(psa.area_name), LOWER(:hint))) DESC
         LIMIT 1
         """)
     List<String> findMatchingAreaName(@Param("hint") String hint);
