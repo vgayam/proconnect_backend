@@ -3,22 +3,24 @@ package com.proconnect.service;
 import com.proconnect.dto.ContactMessageDTO;
 import com.proconnect.entity.ContactMessage;
 import com.proconnect.entity.Professional;
+import com.proconnect.exception.ResourceNotFoundException;
 import com.proconnect.repository.ContactMessageRepository;
 import com.proconnect.repository.ProfessionalRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@org.springframework.stereotype.Service
+@Service
 @RequiredArgsConstructor
 public class ContactService {
-    
+
     private final ContactMessageRepository contactMessageRepository;
     private final ProfessionalRepository professionalRepository;
-    
+
     @Transactional
     public void sendContactMessage(Long professionalId, ContactMessageDTO dto) {
         Professional professional = professionalRepository.findById(professionalId)
-            .orElseThrow(() -> new RuntimeException("Professional not found with id: " + professionalId));
+            .orElseThrow(() -> ResourceNotFoundException.professionalNotFound(professionalId));
         
         ContactMessage message = new ContactMessage();
         message.setProfessional(professional);

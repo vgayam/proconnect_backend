@@ -18,7 +18,9 @@ public class ProfessionalSearchCriteria {
     private String country;
     private Boolean remote;
     private Boolean available;
-    /** Subcategory names to filter on (formerly "skills") */
+    /** Neighbourhood / locality filter — e.g. "Indiranagar" */
+    private String area;
+    /** Subcategory names to filter on */
     private List<String> subcategories;
     /** Kept for backwards-compat — callers may still pass "skills" */
     private List<String> skills;
@@ -28,9 +30,13 @@ public class ProfessionalSearchCriteria {
 
     public boolean hasAnyFilter() {
         return query != null || city != null || state != null || country != null ||
-               remote != null || available != null ||
+               remote != null || available != null || area != null ||
                hasSubcategoriesFilter() ||
                (categories != null && !categories.isEmpty());
+    }
+
+    public boolean hasAreaFilter() {
+        return area != null && !area.isBlank();
     }
 
     public boolean hasSubcategoriesFilter() {
@@ -38,19 +44,8 @@ public class ProfessionalSearchCriteria {
             || (skills != null && !skills.isEmpty());
     }
 
-    /** @deprecated use hasSubcategoriesFilter() */
-    @Deprecated
-    public boolean hasSkillsFilter() {
-        return hasSubcategoriesFilter();
-    }
-
     public boolean hasCategoriesFilter() {
         return categories != null && !categories.isEmpty();
-    }
-
-    public boolean hasLocationOrAvailabilityFilter() {
-        return query != null || city != null || state != null ||
-               country != null || remote != null || available != null;
     }
 
     /** Combined subcategory list (merges subcategories + legacy skills param) */

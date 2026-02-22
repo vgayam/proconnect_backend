@@ -2,6 +2,7 @@ package com.proconnect.mapper;
 
 import com.proconnect.dto.*;
 import com.proconnect.entity.Professional;
+import com.proconnect.entity.ServiceArea;
 import com.proconnect.entity.ServiceOffering;
 import com.proconnect.entity.Subcategory;
 import com.proconnect.entity.SocialLink;
@@ -58,6 +59,9 @@ public class ProfessionalMapper {
         dto.setSocialLinks(entity.getSocialLinks().stream()
             .map(this::toSocialLinkDTO)
             .collect(Collectors.toList()));
+        dto.setServiceAreas(entity.getServiceAreas().stream()
+            .map(ServiceArea::getAreaName)
+            .collect(Collectors.toList()));
 
         return dto;
     }
@@ -94,6 +98,7 @@ public class ProfessionalMapper {
         updateSubcategoriesFromDTO(entity, subcats);
         updateServicesFromDTO(entity, dto.getServices());
         updateSocialLinksFromDTO(entity, dto.getSocialLinks());
+        updateServiceAreasFromDTO(entity, dto.getServiceAreas());
     }
 
     // ── private helpers ────────────────────────────────────────────────────
@@ -154,7 +159,7 @@ public class ProfessionalMapper {
     }
 
     private void updateServicesFromDTO(Professional entity, List<ServiceDTO> serviceDTOs) {
-        if (serviceDTOs != null && !serviceDTOs.isEmpty()) {
+        if (serviceDTOs != null) {
             entity.getServices().clear();
             for (ServiceDTO serviceDTO : serviceDTOs) {
                 ServiceOffering service = new ServiceOffering();
@@ -172,7 +177,7 @@ public class ProfessionalMapper {
     }
 
     private void updateSocialLinksFromDTO(Professional entity, List<SocialLinkDTO> linkDTOs) {
-        if (linkDTOs != null && !linkDTOs.isEmpty()) {
+        if (linkDTOs != null) {
             entity.getSocialLinks().clear();
             for (SocialLinkDTO linkDTO : linkDTOs) {
                 SocialLink link = new SocialLink();
@@ -181,6 +186,20 @@ public class ProfessionalMapper {
                 link.setUrl(linkDTO.getUrl());
                 link.setLabel(linkDTO.getLabel());
                 entity.getSocialLinks().add(link);
+            }
+        }
+    }
+
+    private void updateServiceAreasFromDTO(Professional entity, List<String> areaNamesDTO) {
+        entity.getServiceAreas().clear();
+        if (areaNamesDTO != null) {
+            for (String areaName : areaNamesDTO) {
+                if (areaName != null && !areaName.isBlank()) {
+                    ServiceArea sa = new ServiceArea();
+                    sa.setProfessional(entity);
+                    sa.setAreaName(areaName.trim());
+                    entity.getServiceAreas().add(sa);
+                }
             }
         }
     }

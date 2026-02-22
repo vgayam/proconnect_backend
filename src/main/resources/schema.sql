@@ -19,6 +19,7 @@ DROP FUNCTION IF EXISTS generate_professional_slug() ^^
 DROP TABLE IF EXISTS contact_messages           CASCADE ^^
 DROP TABLE IF EXISTS social_links               CASCADE ^^
 DROP TABLE IF EXISTS services                   CASCADE ^^
+DROP TABLE IF EXISTS professional_service_areas CASCADE ^^
 DROP TABLE IF EXISTS professional_subcategories CASCADE ^^
 DROP TABLE IF EXISTS professional_skills        CASCADE ^^
 DROP TABLE IF EXISTS subcategories              CASCADE ^^
@@ -105,6 +106,17 @@ CREATE TABLE services (
 ) ^^
 
 -- ============================================================
+-- SERVICE AREAS  (neighbourhoods / localities a professional serves)
+-- ============================================================
+CREATE TABLE professional_service_areas (
+    id              BIGSERIAL PRIMARY KEY,
+    professional_id BIGINT       NOT NULL,
+    area_name       VARCHAR(200) NOT NULL,
+    created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE CASCADE
+) ^^
+
+-- ============================================================
 -- SOCIAL LINKS
 -- ============================================================
 CREATE TABLE social_links (
@@ -144,6 +156,8 @@ CREATE INDEX idx_professionals_remote    ON professionals(remote) ^^
 CREATE INDEX idx_professionals_slug      ON professionals(slug) ^^
 CREATE INDEX idx_subcategories_category  ON subcategories(category) ^^
 CREATE INDEX idx_services_professional   ON services(professional_id) ^^
+CREATE INDEX idx_service_areas_professional ON professional_service_areas(professional_id) ^^
+CREATE INDEX idx_service_areas_name_trgm    ON professional_service_areas USING GIN(area_name gin_trgm_ops) ^^
 CREATE INDEX idx_contact_messages_professional ON contact_messages(professional_id) ^^
 CREATE INDEX idx_contact_messages_status ON contact_messages(status) ^^
 

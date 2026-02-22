@@ -14,18 +14,34 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
 
     Optional<Professional> findBySlug(String slug);
 
+    Optional<Professional> findByEmailIgnoreCase(String email);
+
+    boolean existsByEmailIgnoreCase(String email);
+
     List<Professional> findByCity(String city);
 
     List<Professional> findByIsAvailable(Boolean isAvailable);
 
+    @Query("SELECT DISTINCT p.city FROM Professional p WHERE p.city IS NOT NULL AND p.city <> '' ORDER BY p.city")
+    List<String> findDistinctCities();
+
     // ─────────────────────────────────────────────────────────────────────────
-    // Full-text + trigram search  (main search path — native PostgreSQL)
+    // Unified search  (single query handles all filter combinations)
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Primary FTS search using search_vector with ts_rank scoring.
-     * Falls back to trigram similarity on headline/category/subcategory names when
-     * the FTS query matches nothing (handles typos like "plimber" → "plumber").
+     * One query to rule them all.
+     *
+     * Filters (all optional / nullable):
+     *   :query    — FTS + pg_trgm fuzzy keyword search
+     *   :city     — fuzzy city match
+     *   :state    — exact state match
+     *   :country  — exact country match
+     *   :remote   — boolean flag
+     *   :available — boolean flag
+     *   :category — exact category match
+     *   :area     — neighbourhood / locality (service area) — NULL = no area filter
+     *   :subcategoryNames — pg text-array literal e.g. '{plumbing,tiling}' — NULL = no filter
      */
     @Query(nativeQuery = true, value = """
         SELECT DISTINCT p.*,
@@ -36,98 +52,75 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         FROM professionals p
         LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
         LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
+        LEFT JOIN professional_service_areas psa ON psa.professional_id = p.id
         WHERE 1=1
           AND (
               :query IS NULL OR :query = ''
               OR p.search_vector @@ plainto_tsquery('english', :query)
-              OR similarity(p.headline,  :query) > 0.2
-              OR similarity(p.category,  :query) > 0.2
-              OR similarity(coalesce(p.bio,''), :query) > 0.15
-              OR similarity(coalesce(sc.name,''), :query) > 0.3
+              OR similarity(p.headline,              :query) > 0.2
+              OR similarity(p.category,              :query) > 0.2
+              OR similarity(coalesce(p.bio,''),      :query) > 0.15
+              OR similarity(coalesce(sc.name,''),    :query) > 0.3
           )
-          AND (:city      IS NULL OR :city      = '' OR similarity(p.city,    :city)    > 0.25)
-          AND (:state     IS NULL OR :state     = '' OR LOWER(p.state)    = LOWER(:state))
-          AND (:country   IS NULL OR :country   = '' OR LOWER(p.country)  = LOWER(:country))
-          AND (:remote    IS NULL OR p.remote              = :remote)
-          AND (:available IS NULL OR p.is_available        = :available)
-          AND (:category  IS NULL OR :category  = '' OR LOWER(p.category) = LOWER(:category))
+          AND (:city              IS NULL OR :city     = '' OR similarity(p.city,    :city)    > 0.25)
+          AND (:state             IS NULL OR :state    = '' OR LOWER(p.state)    = LOWER(:state))
+          AND (:country           IS NULL OR :country  = '' OR LOWER(p.country)  = LOWER(:country))
+          AND (:remote            IS NULL OR p.remote            = :remote)
+          AND (:available         IS NULL OR p.is_available      = :available)
+          AND (:category          IS NULL OR :category = '' OR LOWER(p.category) = LOWER(:category))
+          AND (:area              IS NULL OR :area     = '' OR similarity(LOWER(psa.area_name), LOWER(:area)) > 0.25)
+          AND (:subcategoryNames  IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
         ORDER BY rank DESC, p.rating DESC NULLS LAST
         LIMIT :pageSize OFFSET :offset
         """)
     List<Professional> searchProfessionals(
-        @Param("query")     String  query,
-        @Param("city")      String  city,
-        @Param("state")     String  state,
-        @Param("country")   String  country,
-        @Param("remote")    Boolean remote,
-        @Param("available") Boolean available,
-        @Param("category")  String  category,
-        @Param("pageSize")  int     pageSize,
-        @Param("offset")    int     offset
+        @Param("query")             String  query,
+        @Param("city")              String  city,
+        @Param("state")             String  state,
+        @Param("country")           String  country,
+        @Param("remote")            Boolean remote,
+        @Param("available")         Boolean available,
+        @Param("category")          String  category,
+        @Param("area")              String  area,
+        @Param("subcategoryNames")  String  subcategoryNames,
+        @Param("pageSize")          int     pageSize,
+        @Param("offset")            int     offset
     );
 
-    /** Count query for pagination total */
     @Query(nativeQuery = true, value = """
         SELECT COUNT(DISTINCT p.id)
         FROM professionals p
         LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
         LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
+        LEFT JOIN professional_service_areas psa ON psa.professional_id = p.id
         WHERE 1=1
           AND (
               :query IS NULL OR :query = ''
               OR p.search_vector @@ plainto_tsquery('english', :query)
-              OR similarity(p.headline,  :query) > 0.2
-              OR similarity(p.category,  :query) > 0.2
-              OR similarity(coalesce(p.bio,''), :query) > 0.15
-              OR similarity(coalesce(sc.name,''), :query) > 0.3
+              OR similarity(p.headline,              :query) > 0.2
+              OR similarity(p.category,              :query) > 0.2
+              OR similarity(coalesce(p.bio,''),      :query) > 0.15
+              OR similarity(coalesce(sc.name,''),    :query) > 0.3
           )
-          AND (:city      IS NULL OR :city      = '' OR similarity(p.city,    :city)    > 0.25)
-          AND (:state     IS NULL OR :state     = '' OR LOWER(p.state)    = LOWER(:state))
-          AND (:country   IS NULL OR :country   = '' OR LOWER(p.country)  = LOWER(:country))
-          AND (:remote    IS NULL OR p.remote              = :remote)
-          AND (:available IS NULL OR p.is_available        = :available)
-          AND (:category  IS NULL OR :category  = '' OR LOWER(p.category) = LOWER(:category))
+          AND (:city              IS NULL OR :city     = '' OR similarity(p.city,    :city)    > 0.25)
+          AND (:state             IS NULL OR :state    = '' OR LOWER(p.state)    = LOWER(:state))
+          AND (:country           IS NULL OR :country  = '' OR LOWER(p.country)  = LOWER(:country))
+          AND (:remote            IS NULL OR p.remote            = :remote)
+          AND (:available         IS NULL OR p.is_available      = :available)
+          AND (:category          IS NULL OR :category = '' OR LOWER(p.category) = LOWER(:category))
+          AND (:area              IS NULL OR :area     = '' OR similarity(LOWER(psa.area_name), LOWER(:area)) > 0.25)
+          AND (:subcategoryNames  IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
         """)
     long countSearchProfessionals(
-        @Param("query")     String  query,
-        @Param("city")      String  city,
-        @Param("state")     String  state,
-        @Param("country")   String  country,
-        @Param("remote")    Boolean remote,
-        @Param("available") Boolean available,
-        @Param("category")  String  category
-    );
-
-    /** FTS + subcategory name filter */
-    @Query(nativeQuery = true, value = """
-        SELECT DISTINCT p.*,
-               CASE WHEN :query IS NOT NULL AND :query <> ''
-                    THEN ts_rank(p.search_vector, plainto_tsquery('english', :query))
-                    ELSE 0.0
-               END AS rank
-        FROM professionals p
-        JOIN professional_subcategories ps ON ps.professional_id = p.id
-        JOIN subcategories sc               ON sc.id = ps.subcategory_id
-        WHERE LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[])
-          AND (
-              :query IS NULL OR :query = ''
-              OR p.search_vector @@ plainto_tsquery('english', :query)
-              OR similarity(p.headline, :query) > 0.2
-              OR similarity(p.category, :query) > 0.2
-              OR similarity(coalesce(sc.name,''), :query) > 0.3
-          )
-          AND (:city      IS NULL OR :city      = '' OR similarity(p.city, :city) > 0.25)
-          AND (:available IS NULL OR p.is_available = :available)
-        ORDER BY rank DESC, p.rating DESC NULLS LAST
-        LIMIT :pageSize OFFSET :offset
-        """)
-    List<Professional> searchBySubcategoryNames(
-        @Param("subcategoryNames") String  subcategoryNamesArray,
-        @Param("query")            String  query,
-        @Param("city")             String  city,
-        @Param("available")        Boolean available,
-        @Param("pageSize")         int     pageSize,
-        @Param("offset")           int     offset
+        @Param("query")             String  query,
+        @Param("city")              String  city,
+        @Param("state")             String  state,
+        @Param("country")           String  country,
+        @Param("remote")            Boolean remote,
+        @Param("available")         Boolean available,
+        @Param("category")          String  category,
+        @Param("area")              String  area,
+        @Param("subcategoryNames")  String  subcategoryNames
     );
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -138,9 +131,7 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         SELECT p.category AS name, COUNT(DISTINCT p.id) AS cnt
         FROM professionals p
         WHERE p.category IS NOT NULL AND p.category <> ''
-        GROUP BY p.category
-        ORDER BY cnt DESC
-        LIMIT 20
+        GROUP BY p.category ORDER BY cnt DESC LIMIT 20
         """)
     List<Object[]> facetsByCategory();
 
@@ -148,26 +139,28 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         SELECT p.city AS name, COUNT(DISTINCT p.id) AS cnt
         FROM professionals p
         WHERE p.city IS NOT NULL AND p.city <> ''
-        GROUP BY p.city
-        ORDER BY cnt DESC
-        LIMIT 20
+        GROUP BY p.city ORDER BY cnt DESC LIMIT 20
         """)
     List<Object[]> facetsByCity();
 
+    @Query(nativeQuery = true, value = """
+        SELECT psa.area_name AS name, COUNT(DISTINCT psa.professional_id) AS cnt
+        FROM professional_service_areas psa
+        WHERE psa.area_name IS NOT NULL AND psa.area_name <> ''
+        GROUP BY psa.area_name ORDER BY cnt DESC LIMIT 30
+        """)
+    List<Object[]> facetsByServiceArea();
+
     // ─────────────────────────────────────────────────────────────────────────
-    // Legacy / convenience
+    // Area name lookup (for natural-language query parsing)
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Query("SELECT DISTINCT p FROM Professional p JOIN p.subcategories s WHERE s.name IN :names")
-    List<Professional> findBySubcategoriesNameIn(@Param("names") List<String> names);
-
-    @Query("SELECT DISTINCT p FROM Professional p JOIN p.subcategories s WHERE s.category IN :categories")
-    List<Professional> findBySubcategoriesCategoryIn(@Param("categories") List<String> categories);
-
-    @Query("SELECT DISTINCT p FROM Professional p LEFT JOIN p.subcategories sc " +
-           "WHERE p.category IN :categories OR sc.category IN :categories")
-    List<Professional> findByCategoryOrSubcategoriesCategory(@Param("categories") List<String> categories);
-
-    @Query("SELECT DISTINCT p.city FROM Professional p WHERE p.city IS NOT NULL AND p.city <> '' ORDER BY p.city")
-    List<String> findDistinctCities();
+    @Query(nativeQuery = true, value = """
+        SELECT DISTINCT psa.area_name
+        FROM professional_service_areas psa
+        WHERE similarity(LOWER(psa.area_name), LOWER(:hint)) > 0.25
+        ORDER BY similarity(LOWER(psa.area_name), LOWER(:hint)) DESC
+        LIMIT 1
+        """)
+    List<String> findMatchingAreaName(@Param("hint") String hint);
 }

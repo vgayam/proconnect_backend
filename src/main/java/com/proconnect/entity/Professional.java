@@ -113,6 +113,9 @@ public class Professional {
     private List<ServiceOffering> services = new ArrayList<>();
 
     @OneToMany(mappedBy = "professional", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ServiceArea> serviceAreas = new ArrayList<>();
+
+    @OneToMany(mappedBy = "professional", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SocialLink> socialLinks = new ArrayList<>();
 
     @CreationTimestamp

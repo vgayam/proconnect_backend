@@ -42,26 +42,7 @@ public class ProfessionalService {
      * Unified search — returns a paginated {@link SearchResultDTO} with facets.
      * Accepts both "subcategories" (new) and "skills" (legacy alias).
      */
-    public SearchResultDTO searchProfessionals(
-        String query, String city, String state, String country,
-        Boolean remote, Boolean available,
-        List<String> subcategories, List<String> skills,
-        List<String> categories, int page, int pageSize
-    ) {
-        ProfessionalSearchCriteria criteria = ProfessionalSearchCriteria.builder()
-            .query(query)
-            .city(city)
-            .state(state)
-            .country(country)
-            .remote(remote)
-            .available(available)
-            .subcategories(subcategories)
-            .skills(skills)
-            .categories(categories)
-            .page(page)
-            .pageSize(pageSize)
-            .build();
-
+    public SearchResultDTO searchProfessionals(ProfessionalSearchCriteria criteria) {
         return searchService.search(criteria);
     }
 

@@ -39,6 +39,9 @@ public class ProfessionalDTO {
     private List<ServiceDTO> services;
     private List<SocialLinkDTO> socialLinks;
 
+    /** Areas/localities this professional serves — e.g. ["Indiranagar", "Koramangala"] */
+    private List<String> serviceAreas;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

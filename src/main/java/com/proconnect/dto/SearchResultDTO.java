@@ -36,4 +36,6 @@ public class SearchResultDTO {
     private Map<String, Long> categoryFacets;
     private Map<String, Long> cityFacets;
     private Map<String, Long> remoteFacets;
+    /** Counts per service area — e.g. {"Indiranagar": 5, "Koramangala": 3} */
+    private Map<String, Long> areaFacets;
 }

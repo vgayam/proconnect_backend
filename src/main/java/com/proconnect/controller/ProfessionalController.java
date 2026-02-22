@@ -1,9 +1,8 @@
 package com.proconnect.controller;
 
-import com.proconnect.dto.ContactMessageDTO;
 import com.proconnect.dto.ProfessionalDTO;
+import com.proconnect.dto.ProfessionalSearchCriteria;
 import com.proconnect.dto.SearchResultDTO;
-import com.proconnect.service.ContactService;
 import com.proconnect.service.ProfessionalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +20,6 @@ import java.util.List;
 public class ProfessionalController {
 
     private final ProfessionalService professionalService;
-    private final ContactService contactService;
 
     /**
      * Search / list professionals.
@@ -41,24 +39,36 @@ public class ProfessionalController {
         @RequestParam(required = false)                     List<String> skills,      // legacy alias
         @RequestParam(required = false)                     List<String> categories,  // multi-value
         @RequestParam(required = false)                     String       category,    // single-value alias
+        @RequestParam(required = false)                     String       area,        // neighbourhood / locality
         @RequestParam(defaultValue = "0")                   int          page,
         @RequestParam(defaultValue = "10")                  int          pageSize
     ) {
-        log.info("GET /api/professionals — q={}, city={}, state={}, country={}, remote={}, available={}, subcategories={}, skills={}, categories={}, category={}, page={}, pageSize={}",
-            q, city, state, country, remote, available, subcategories, skills, categories, category, page, pageSize);
-        // Normalise: single ?category=X and ?location=X are aliases for the list/city params
+        log.info("GET /api/professionals — q={}, city={}, location={}, state={}, country={}, remote={}, available={}, subcategories={}, skills={}, categories={}, category={}, area={}, page={}, pageSize={}",
+            q, city, location, state, country, remote, available, subcategories, skills, categories, category, area, page, pageSize);
+
+        // Normalise aliases: ?location= → city, ?category= → categories list
         String effectiveCity = (city != null && !city.isBlank()) ? city
                              : (location != null && !location.isBlank()) ? location : null;
 
-        List<String> effectiveCategories = categories;
-        if ((effectiveCategories == null || effectiveCategories.isEmpty())
-                && category != null && !category.isBlank()) {
-            effectiveCategories = List.of(category);
-        }
+        List<String> effectiveCategories = (categories != null && !categories.isEmpty()) ? categories
+                : (category != null && !category.isBlank()) ? List.of(category) : null;
 
-        return ResponseEntity.ok(professionalService.searchProfessionals(
-            q, effectiveCity, state, country, remote, available,
-            subcategories, skills, effectiveCategories, page, pageSize));
+        ProfessionalSearchCriteria criteria = ProfessionalSearchCriteria.builder()
+            .query(q)
+            .city(effectiveCity)
+            .state(state)
+            .country(country)
+            .remote(remote)
+            .available(available)
+            .subcategories(subcategories)
+            .skills(skills)
+            .categories(effectiveCategories)
+            .area(area)
+            .page(page)
+            .pageSize(pageSize)
+            .build();
+
+        return ResponseEntity.ok(professionalService.searchProfessionals(criteria));
     }
 
     /** Look up a professional by numeric ID */
@@ -98,16 +108,6 @@ public class ProfessionalController {
         log.info("DELETE /api/professionals/{}", id);
         professionalService.deleteProfessional(id);
         return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{id}/contact")
-    public ResponseEntity<Void> contactProfessional(
-        @PathVariable Long id,
-        @Valid @RequestBody ContactMessageDTO dto
-    ) {
-        log.info("POST /api/professionals/{}/contact — from={} <{}>", id, dto.getName(), dto.getEmail());
-        contactService.sendContactMessage(id, dto);
-        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/cities")
