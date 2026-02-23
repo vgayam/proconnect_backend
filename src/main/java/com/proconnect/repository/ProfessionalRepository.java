@@ -53,23 +53,24 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
           AND (
               :query IS NULL OR :query = ''
               OR p.search_vector @@ plainto_tsquery('english', :query)
-              OR word_similarity(:query, p.headline)           > 0.45
-              OR word_similarity(:query, p.category)           > 0.45
-              OR word_similarity(:query, coalesce(p.bio,''))   > 0.4
-              OR word_similarity(:query, coalesce(sc.name,'')) > 0.45
+              OR p.search_vector @@ to_tsquery('english', regexp_replace(trim(:query), '\\s+', ':* & ', 'g') || ':*')
+              OR similarity(:query, p.headline)           > 0.25
+              OR similarity(:query, p.category)           > 0.25
+              OR similarity(:query, coalesce(p.bio,''))   > 0.2
+              OR similarity(:query, coalesce(sc.name,'')) > 0.25
           )
-          AND (:city             IS NULL OR :city    = '' OR word_similarity(:city,   p.city)   > 0.4)
+          AND (:city             IS NULL OR :city    = '' OR similarity(:city,   p.city)   > 0.3)
           AND (:state            IS NULL OR :state   = '' OR LOWER(p.state)   = LOWER(:state))
           AND (:country          IS NULL OR :country = '' OR LOWER(p.country) = LOWER(:country))
           AND (:remote           IS NULL OR p.remote       = :remote)
           AND (:available        IS NULL OR p.is_available = :available)
           AND (:category         IS NULL OR :category = '' OR LOWER(p.category) = LOWER(:category))
-          AND (:area             IS NULL OR :area    = '' OR word_similarity(:area, LOWER(psa.area_name)) > 0.3)
+          AND (:area             IS NULL OR :area    = '' OR similarity(:area, LOWER(psa.area_name)) > 0.2)
           AND (:subcategoryNames IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
         GROUP BY p.id
         ORDER BY
           MAX(COALESCE(ts_rank(p.search_vector, plainto_tsquery('english', COALESCE(:query,''))), 0.0) +
-              word_similarity(COALESCE(:query,''), p.headline) * 0.5) DESC,
+              similarity(COALESCE(:query,''), p.headline) * 0.5) DESC,
           p.rating DESC NULLS LAST
         LIMIT :pageSize OFFSET :offset
         """)
@@ -97,18 +98,19 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
           AND (
               :query IS NULL OR :query = ''
               OR p.search_vector @@ plainto_tsquery('english', :query)
-              OR word_similarity(:query, p.headline)           > 0.45
-              OR word_similarity(:query, p.category)           > 0.45
-              OR word_similarity(:query, coalesce(p.bio,''))   > 0.4
-              OR word_similarity(:query, coalesce(sc.name,'')) > 0.45
+              OR p.search_vector @@ to_tsquery('english', regexp_replace(trim(:query), '\\s+', ':* & ', 'g') || ':*')
+              OR similarity(:query, p.headline)           > 0.25
+              OR similarity(:query, p.category)           > 0.25
+              OR similarity(:query, coalesce(p.bio,''))   > 0.2
+              OR similarity(:query, coalesce(sc.name,'')) > 0.25
           )
-          AND (:city              IS NULL OR :city     = '' OR word_similarity(:city,  p.city)   > 0.4)
+          AND (:city              IS NULL OR :city     = '' OR similarity(:city,  p.city)   > 0.3)
           AND (:state             IS NULL OR :state    = '' OR LOWER(p.state)    = LOWER(:state))
           AND (:country           IS NULL OR :country  = '' OR LOWER(p.country)  = LOWER(:country))
           AND (:remote            IS NULL OR p.remote            = :remote)
           AND (:available         IS NULL OR p.is_available      = :available)
           AND (:category          IS NULL OR :category = '' OR LOWER(p.category) = LOWER(:category))
-          AND (:area              IS NULL OR :area     = '' OR word_similarity(:area, LOWER(psa.area_name)) > 0.3)
+          AND (:area              IS NULL OR :area     = '' OR similarity(:area, LOWER(psa.area_name)) > 0.2)
           AND (:subcategoryNames  IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
         """)
     long countSearchProfessionals(
