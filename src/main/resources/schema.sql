@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS subcategories              CASCADE ^^
 DROP TABLE IF EXISTS skills                     CASCADE ^^
 DROP TABLE IF EXISTS reviews                    CASCADE ^^
 DROP TABLE IF EXISTS booking_inquiries          CASCADE ^^
+DROP TABLE IF EXISTS email_otps                 CASCADE ^^
 DROP TABLE IF EXISTS professionals              CASCADE ^^
 
 -- ============================================================
@@ -146,6 +147,20 @@ CREATE TABLE contact_messages (
     created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE CASCADE
 ) ^^
+
+-- ============================================================
+-- EMAIL OTPS  (short-lived 6-digit codes for email verification)
+-- ============================================================
+CREATE TABLE email_otps (
+    id          BIGSERIAL    PRIMARY KEY,
+    email       VARCHAR(200) NOT NULL,
+    otp_code    VARCHAR(6)   NOT NULL,
+    verified    BOOLEAN      NOT NULL DEFAULT FALSE,
+    expires_at  TIMESTAMP    NOT NULL,
+    created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+) ^^
+
+CREATE INDEX idx_email_otps_email ON email_otps(email) ^^
 
 -- ============================================================
 -- BOOKING INQUIRIES  (tracks who contacted whom → gates reviews)

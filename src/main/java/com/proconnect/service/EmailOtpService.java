@@ -1,0 +1,89 @@
+package com.proconnect.service;
+
+import com.proconnect.entity.EmailOtp;
+import com.proconnect.repository.EmailOtpRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class EmailOtpService {
+
+    private final EmailOtpRepository emailOtpRepository;
+    private final JavaMailSender mailSender;
+
+    @Value("${app.mail.dev-mode:true}")
+    private boolean devMode;
+
+    @Value("${app.mail.from:noreply@proconnect.in}")
+    private String fromAddress;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    /** OTP valid for 10 minutes */
+    private static final int OTP_TTL_MINUTES = 10;
+
+    @Transactional
+    public void sendOtp(String email) {
+        // Invalidate any outstanding OTPs for this email
+        emailOtpRepository.invalidateAll(email);
+
+        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+
+        EmailOtp otp = new EmailOtp();
+        otp.setEmail(email.toLowerCase().trim());
+        otp.setOtpCode(code);
+        otp.setVerified(false);
+        otp.setExpiresAt(LocalDateTime.now().plusMinutes(OTP_TTL_MINUTES));
+        emailOtpRepository.save(otp);
+
+        if (devMode) {
+            log.info("===== [DEV MODE] OTP for {} => {} (valid {}min) =====", email, code, OTP_TTL_MINUTES);
+        } else {
+            sendEmail(email, code);
+        }
+    }
+
+    @Transactional
+    public boolean verifyOtp(String email, String code) {
+        return emailOtpRepository
+            .findValidOtp(email.toLowerCase().trim(), code.trim())
+            .map(otp -> {
+                otp.setVerified(true);
+                emailOtpRepository.save(otp);
+                return true;
+            })
+            .orElse(false);
+    }
+
+    private void sendEmail(String toEmail, String code) {
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(fromAddress);
+            msg.setTo(toEmail);
+            msg.setSubject("Your ProConnect verification code");
+            msg.setText("""
+                Hi,
+
+                Your verification code is: %s
+
+                This code expires in %d minutes. Do not share it with anyone.
+
+                — The ProConnect Team
+                """.formatted(code, OTP_TTL_MINUTES));
+            mailSender.send(msg);
+            log.info("OTP email sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage());
+            throw new RuntimeException("Failed to send verification email. Please try again.");
+        }
+    }
+}
