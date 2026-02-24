@@ -24,6 +24,8 @@ DROP TABLE IF EXISTS professional_subcategories CASCADE ^^
 DROP TABLE IF EXISTS professional_skills        CASCADE ^^
 DROP TABLE IF EXISTS subcategories              CASCADE ^^
 DROP TABLE IF EXISTS skills                     CASCADE ^^
+DROP TABLE IF EXISTS reviews                    CASCADE ^^
+DROP TABLE IF EXISTS booking_inquiries          CASCADE ^^
 DROP TABLE IF EXISTS professionals              CASCADE ^^
 
 -- ============================================================
@@ -146,6 +148,37 @@ CREATE TABLE contact_messages (
 ) ^^
 
 -- ============================================================
+-- BOOKING INQUIRIES  (tracks who contacted whom → gates reviews)
+-- ============================================================
+CREATE TABLE booking_inquiries (
+    id              BIGSERIAL    PRIMARY KEY,
+    professional_id BIGINT       NOT NULL,
+    customer_name   VARCHAR(200) NOT NULL,
+    customer_email  VARCHAR(200),
+    customer_phone  VARCHAR(30),
+    review_token    VARCHAR(64)  NOT NULL UNIQUE,
+    token_used      BOOLEAN      NOT NULL DEFAULT FALSE,
+    token_expires_at TIMESTAMP   NOT NULL,
+    created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE CASCADE
+) ^^
+
+-- ============================================================
+-- REVIEWS  (only submittable via a valid booking_inquiry token)
+-- ============================================================
+CREATE TABLE reviews (
+    id              BIGSERIAL    PRIMARY KEY,
+    professional_id BIGINT       NOT NULL,
+    inquiry_id      BIGINT       NOT NULL UNIQUE,
+    customer_name   VARCHAR(200) NOT NULL,
+    rating          SMALLINT     NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment         TEXT,
+    created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE CASCADE,
+    FOREIGN KEY (inquiry_id)      REFERENCES booking_inquiries(id) ON DELETE CASCADE
+) ^^
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 CREATE INDEX idx_professionals_city      ON professionals(city) ^^
@@ -160,6 +193,9 @@ CREATE INDEX idx_service_areas_professional ON professional_service_areas(profes
 CREATE INDEX idx_service_areas_name_trgm    ON professional_service_areas USING GIN(area_name gin_trgm_ops) ^^
 CREATE INDEX idx_contact_messages_professional ON contact_messages(professional_id) ^^
 CREATE INDEX idx_contact_messages_status ON contact_messages(status) ^^
+CREATE INDEX idx_booking_inquiries_professional ON booking_inquiries(professional_id) ^^
+CREATE INDEX idx_booking_inquiries_token        ON booking_inquiries(review_token) ^^
+CREATE INDEX idx_reviews_professional           ON reviews(professional_id) ^^
 
 CREATE INDEX idx_professionals_fts
     ON professionals USING GIN(search_vector) ^^
