@@ -73,4 +73,23 @@ public class ProfessionalService {
     public List<String> getDistinctCities() {
         return professionalRepository.findDistinctCities();
     }
+
+    /** Update the profile of the currently authenticated professional. */
+    @Transactional
+    public ProfessionalDTO updateMyProfile(Long professionalId, ProfessionalDTO dto) {
+        Professional professional = professionalRepository.findById(professionalId)
+                .orElseThrow(() -> ResourceNotFoundException.professionalNotFound(professionalId));
+        professionalMapper.updateEntityFromDTO(professional, dto);
+        return professionalMapper.toDTO(professionalRepository.save(professional));
+    }
+
+    /** Toggle the isAvailable flag for the currently authenticated professional. */
+    @Transactional
+    public Boolean updateAvailability(Long professionalId, Boolean isAvailable) {
+        Professional professional = professionalRepository.findById(professionalId)
+                .orElseThrow(() -> ResourceNotFoundException.professionalNotFound(professionalId));
+        professional.setIsAvailable(isAvailable);
+        professionalRepository.save(professional);
+        return isAvailable;
+    }
 }

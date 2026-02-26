@@ -1,5 +1,6 @@
 package com.proconnect.controller;
 
+import com.proconnect.dto.AvailabilityDTO;
 import com.proconnect.dto.ProfessionalDTO;
 import com.proconnect.dto.ProfessionalSearchCriteria;
 import com.proconnect.dto.SearchResultDTO;
@@ -9,9 +10,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/professionals")
@@ -114,5 +117,30 @@ public class ProfessionalController {
     public ResponseEntity<List<String>> getDistinctCities() {
         log.info("GET /api/professionals/cities");
         return ResponseEntity.ok(professionalService.getDistinctCities());
+    }
+
+    /**
+     * PUT /api/professionals/me — update the logged-in professional's full profile.
+     * Requires JWT authentication.
+     */
+    @PutMapping("/me")
+    public ResponseEntity<ProfessionalDTO> updateMyProfile(
+            @AuthenticationPrincipal Long professionalId,
+            @Valid @RequestBody ProfessionalDTO dto) {
+        log.info("PUT /api/professionals/me — professionalId={}", professionalId);
+        return ResponseEntity.ok(professionalService.updateMyProfile(professionalId, dto));
+    }
+
+    /**
+     * PATCH /api/professionals/me/availability — toggle availability flag.
+     * Requires JWT authentication.
+     */
+    @PatchMapping("/me/availability")
+    public ResponseEntity<?> updateAvailability(
+            @AuthenticationPrincipal Long professionalId,
+            @RequestBody AvailabilityDTO body) {
+        log.info("PATCH /api/professionals/me/availability — professionalId={}, isAvailable={}", professionalId, body.getIsAvailable());
+        Boolean updated = professionalService.updateAvailability(professionalId, body.getIsAvailable());
+        return ResponseEntity.ok(Map.of("isAvailable", updated));
     }
 }
