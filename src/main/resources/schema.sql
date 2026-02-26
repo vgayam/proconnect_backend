@@ -28,6 +28,20 @@ DROP TABLE IF EXISTS reviews                    CASCADE ^^
 DROP TABLE IF EXISTS booking_inquiries          CASCADE ^^
 DROP TABLE IF EXISTS email_otps                 CASCADE ^^
 DROP TABLE IF EXISTS professionals              CASCADE ^^
+DROP TABLE IF EXISTS categories                 CASCADE ^^
+
+-- ============================================================
+-- CATEGORIES  (canonical category list — no more hardcoded strings)
+-- ============================================================
+CREATE TABLE categories (
+    id          BIGSERIAL    PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL UNIQUE,
+    emoji       VARCHAR(10),
+    description VARCHAR(500),
+    sort_order  INTEGER      NOT NULL DEFAULT 0,
+    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
+) ^^
 
 -- ============================================================
 -- PROFESSIONALS
@@ -56,20 +70,22 @@ CREATE TABLE professionals (
     email           VARCHAR(100),
     phone           VARCHAR(30),
     whatsapp        VARCHAR(30),
-    category        VARCHAR(100),
+    category_id     BIGINT,
     search_vector   tsvector,
     created_at      TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMP             DEFAULT CURRENT_TIMESTAMP
+    updated_at      TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 ) ^^
 
 -- ============================================================
 -- SUBCATEGORIES
 -- ============================================================
 CREATE TABLE subcategories (
-    id         BIGSERIAL PRIMARY KEY,
-    name       VARCHAR(100) NOT NULL UNIQUE,
-    category   VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id          BIGSERIAL PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL UNIQUE,
+    category_id BIGINT       NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
 ) ^^
 
 -- ============================================================
@@ -81,14 +97,6 @@ CREATE TABLE professional_subcategories (
     PRIMARY KEY (professional_id, subcategory_id),
     FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE CASCADE,
     FOREIGN KEY (subcategory_id)  REFERENCES subcategories(id) ON DELETE CASCADE
-) ^^
-
-CREATE TABLE professional_skills (
-    professional_id BIGINT NOT NULL,
-    skill_id        BIGINT NOT NULL,
-    PRIMARY KEY (professional_id, skill_id),
-    FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE CASCADE,
-    FOREIGN KEY (skill_id)        REFERENCES subcategories(id) ON DELETE CASCADE
 ) ^^
 
 -- ============================================================
@@ -198,11 +206,11 @@ CREATE TABLE reviews (
 -- ============================================================
 CREATE INDEX idx_professionals_city      ON professionals(city) ^^
 CREATE INDEX idx_professionals_country   ON professionals(country) ^^
-CREATE INDEX idx_professionals_category  ON professionals(category) ^^
+CREATE INDEX idx_professionals_category  ON professionals(category_id) ^^
 CREATE INDEX idx_professionals_available ON professionals(is_available) ^^
 CREATE INDEX idx_professionals_remote    ON professionals(remote) ^^
 CREATE INDEX idx_professionals_slug      ON professionals(slug) ^^
-CREATE INDEX idx_subcategories_category  ON subcategories(category) ^^
+CREATE INDEX idx_subcategories_category  ON subcategories(category_id) ^^
 CREATE INDEX idx_services_professional   ON services(professional_id) ^^
 CREATE INDEX idx_service_areas_professional ON professional_service_areas(professional_id) ^^
 CREATE INDEX idx_service_areas_name_trgm    ON professional_service_areas USING GIN(area_name gin_trgm_ops) ^^
@@ -226,11 +234,14 @@ CREATE INDEX idx_subcategories_name_trgm
 -- FTS TRIGGER
 -- ============================================================
 CREATE OR REPLACE FUNCTION professionals_search_vector_update() RETURNS trigger AS $$
+DECLARE
+    v_category_name TEXT;
 BEGIN
+    SELECT name INTO v_category_name FROM categories WHERE id = NEW.category_id;
     NEW.search_vector :=
         setweight(to_tsvector('english', unaccent(coalesce(NEW.first_name,'') || ' ' || coalesce(NEW.last_name,''))), 'A') ||
         setweight(to_tsvector('english', unaccent(coalesce(NEW.headline,''))),                                        'A') ||
-        setweight(to_tsvector('english', unaccent(coalesce(NEW.category,''))),                                        'B') ||
+        setweight(to_tsvector('english', unaccent(coalesce(v_category_name,''))),                                     'B') ||
         setweight(to_tsvector('english', unaccent(coalesce(NEW.city,'') || ' ' || coalesce(NEW.state,'') || ' ' || coalesce(NEW.country,''))), 'B') ||
         setweight(to_tsvector('english', unaccent(coalesce(NEW.bio,''))),                                             'C');
     RETURN NEW;
@@ -246,16 +257,18 @@ CREATE TRIGGER trig_professionals_fts
 -- ============================================================
 CREATE OR REPLACE FUNCTION generate_professional_slug() RETURNS trigger AS $$
 DECLARE
-    base_slug  TEXT;
-    final_slug TEXT;
-    counter    INT := 0;
+    base_slug       TEXT;
+    final_slug      TEXT;
+    counter         INT := 0;
+    v_category_name TEXT;
 BEGIN
     IF NEW.slug IS NULL OR NEW.slug = '' THEN
+        SELECT name INTO v_category_name FROM categories WHERE id = NEW.category_id;
         base_slug := regexp_replace(
             lower(
                 unaccent(
                     coalesce(NEW.first_name,'') || '-' || coalesce(NEW.last_name,'') ||
-                    '-' || coalesce(NEW.category,'') || '-' || coalesce(NEW.city,'')
+                    '-' || coalesce(v_category_name,'') || '-' || coalesce(NEW.city,'')
                 )
             ),
             '[^a-z0-9]+', '-', 'g'
@@ -280,9 +293,33 @@ CREATE TRIGGER trig_professionals_slug
     FOR EACH ROW EXECUTE FUNCTION generate_professional_slug() ^^
 
 -- ============================================================
+-- SEED CATEGORIES
+-- ============================================================
+INSERT INTO categories (name, emoji, description, sort_order) VALUES
+    ('Plumbing',         '🔧', 'Pipe installation, drain cleaning, and fixture repair',          1),
+    ('Electrical',       '⚡', 'Wiring, panel upgrades, solar installation, and lighting',       2),
+    ('Carpentry',        '🪚', 'Custom furniture, modular kitchens, and wardrobes',              3),
+    ('Cleaning',         '🧹', 'Home deep cleaning, office cleaning, and sofa/carpet cleaning',  4),
+    ('Photography',      '📷', 'Wedding, portrait, event, and commercial photography',           5),
+    ('Interior Design',  '🛋️', 'Residential and commercial interior design and space planning', 6),
+    ('Painting',         '🎨', 'Interior/exterior painting, texture finishes, waterproofing',    7),
+    ('HVAC',             '❄️', 'AC installation, service, and heating repair',                  8),
+    ('Landscaping',      '🌿', 'Lawn maintenance, garden design, and tree service',              9),
+    ('Graphic Design',   '✏️', 'Logo, brand, UI/UX design, and prototyping',                   10),
+    ('Fitness',          '💪', 'Personal training, yoga, nutrition coaching, and meditation',    11),
+    ('Education',        '📚', 'Math, science, language tutoring, and coding for kids',         12),
+    ('Technology',       '💻', 'Full-stack dev, mobile apps, cloud, and DevOps',                13),
+    ('Pest Control',     '🐛', 'Cockroach, termite, and rodent control',                        14),
+    ('Beauty & Wellness','💆', 'Bridal makeup, mehendi, spa, and haircut',                      15),
+    ('Handyman',         '🔨', 'Tile fixing, appliance repair, furniture assembly',             16),
+    ('Vehicle',          '🚗', 'Bike service, car repair, and denting & painting',              17)
+ON CONFLICT (name) DO NOTHING ^^
+
+-- ============================================================
 -- SEED SUBCATEGORIES
 -- ============================================================
-INSERT INTO subcategories (name, category) VALUES
+INSERT INTO subcategories (name, category_id)
+SELECT v.name, c.id FROM (VALUES
     ('Residential Plumbing', 'Plumbing'), ('Commercial Plumbing', 'Plumbing'),
     ('Pipe Installation', 'Plumbing'),    ('Drain Cleaning', 'Plumbing'),
     ('Tap & Fixture Repair', 'Plumbing'), ('Overhead Tank Cleaning', 'Plumbing'),
@@ -324,6 +361,8 @@ INSERT INTO subcategories (name, category) VALUES
     ('Haircut & Styling', 'Beauty & Wellness'), ('Bridal Makeup', 'Beauty & Wellness'),
     ('Spa & Massage', 'Beauty & Wellness'),     ('Mehendi', 'Beauty & Wellness'),
     ('Bike Service', 'Vehicle'), ('Car Repair', 'Vehicle'), ('Denting & Painting', 'Vehicle')
+) AS v(name, cat_name)
+JOIN categories c ON c.name = v.cat_name
 ON CONFLICT (name) DO NOTHING ^^
 
 -- ============================================================
@@ -333,8 +372,13 @@ INSERT INTO professionals
     (first_name, last_name, display_name, headline, bio,
      city, state, country, remote, is_verified, is_available,
      rating, review_count, hourly_rate_min, hourly_rate_max, currency,
-     email, phone, category)
-VALUES
+     email, phone, category_id)
+SELECT v.first_name, v.last_name, v.display_name, v.headline, v.bio,
+       v.city, v.state, v.country, v.remote, v.is_verified, v.is_available,
+       v.rating, v.review_count, v.hourly_rate_min, v.hourly_rate_max, v.currency,
+       v.email, v.phone,
+       (SELECT id FROM categories WHERE name = v.cat_name)
+FROM (VALUES
 ('Arjun',   'Sharma',   'Arjun Sharma',
  'Senior Full-Stack Developer | React + Spring Boot',
  'Ex-Flipkart engineer with 8 years building scalable web apps. Specialises in React, Spring Boot, and AWS. Open to freelance projects and consulting.',
@@ -394,7 +438,10 @@ VALUES
  'Flutter Developer & DevOps Engineer | GCP / AWS',
  'Full-stack mobile developer with 6 years building Flutter apps on Play Store and App Store. Also handles CI/CD pipelines and cloud deployments.',
  'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.8, 67, 1200, 2500, 'INR', 'nikhil.patel@example.com', '+919900010303', 'Technology') ^^
+ 4.8, 67, 1200, 2500, 'INR', 'nikhil.patel@example.com', '+919900010303', 'Technology')
+) AS v(first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available,
+       rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, cat_name)
+ON CONFLICT (email) DO NOTHING ^^
 
 -- ============================================================
 -- LINK SUBCATEGORIES TO PROFESSIONALS
@@ -466,8 +513,13 @@ INSERT INTO professionals
     (first_name, last_name, display_name, headline, bio,
      city, state, country, remote, is_verified, is_available,
      rating, review_count, hourly_rate_min, hourly_rate_max, currency,
-     email, phone, category)
-VALUES
+     email, phone, category_id)
+SELECT v.first_name, v.last_name, v.display_name, v.headline, v.bio,
+       v.city, v.state, v.country, v.remote, v.is_verified, v.is_available,
+       v.rating, v.review_count, v.hourly_rate_min, v.hourly_rate_max, v.currency,
+       v.email, v.phone,
+       (SELECT id FROM categories WHERE name = v.cat_name)
+FROM (VALUES
 ('Sanjay',  'Verma',    'Sanjay Verma',
  'Pest Control Specialist | Residential & Commercial',
  'Certified pest control expert serving Bengaluru since 2012. Provides eco-friendly treatment for cockroaches, termites, rodents, and bed bugs. Covers all major areas including Whitefield, Marathahalli, and Electronic City.',
@@ -527,7 +579,10 @@ VALUES
  'Car Repair & Denting Specialist | Multi-Brand',
  'Experienced automobile technician with expertise in denting, painting, and general car repair for Maruti, Hyundai, Toyota, and Honda vehicles. Based in Yeshwanthpur with doorstep service across Bengaluru.',
  'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.6, 198, 500, 2500, 'INR', 'harish.naidu@example.com', '+919900011515', 'Vehicle') ^^
+ 4.6, 198, 500, 2500, 'INR', 'harish.naidu@example.com', '+919900011515', 'Vehicle')
+) AS v(first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available,
+       rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, cat_name)
+ON CONFLICT (email) DO NOTHING ^^
 
 -- LINK SUBCATEGORIES — Batch 2
 INSERT INTO professional_subcategories (professional_id, subcategory_id)

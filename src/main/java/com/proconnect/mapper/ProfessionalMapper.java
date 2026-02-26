@@ -1,11 +1,13 @@
 package com.proconnect.mapper;
 
 import com.proconnect.dto.*;
+import com.proconnect.entity.Category;
 import com.proconnect.entity.Professional;
 import com.proconnect.entity.ServiceArea;
 import com.proconnect.entity.ServiceOffering;
 import com.proconnect.entity.Subcategory;
 import com.proconnect.entity.SocialLink;
+import com.proconnect.repository.CategoryRepository;
 import com.proconnect.repository.SubcategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 public class ProfessionalMapper {
 
     private final SubcategoryRepository subcategoryRepository;
+    private final CategoryRepository categoryRepository;
 
     public ProfessionalDTO toDTO(Professional entity) {
         if (entity == null) return null;
@@ -42,7 +45,7 @@ public class ProfessionalMapper {
         dto.setEmail(entity.getEmail());
         dto.setPhone(entity.getPhone());
         dto.setWhatsapp(entity.getWhatsapp());
-        dto.setCategory(entity.getCategory());
+        dto.setCategory(entity.getCategoryName());
 
         dto.setLocation(toLocationDTO(entity));
 
@@ -89,7 +92,10 @@ public class ProfessionalMapper {
         entity.setEmail(dto.getEmail());
         entity.setPhone(dto.getPhone());
         entity.setWhatsapp(dto.getWhatsapp());
-        entity.setCategory(dto.getCategory());
+        if (dto.getCategory() != null) {
+            categoryRepository.findByName(dto.getCategory())
+                .ifPresent(entity::setCategory);
+        }
 
         updateLocationFromDTO(entity, dto.getLocation());
 
@@ -113,7 +119,7 @@ public class ProfessionalMapper {
     }
 
     private SubcategoryDTO toSubcategoryDTO(Subcategory subcategory) {
-        return new SubcategoryDTO(subcategory.getId(), subcategory.getName(), subcategory.getCategory());
+        return new SubcategoryDTO(subcategory.getId(), subcategory.getName(), subcategory.getCategoryName());
     }
 
     private ServiceDTO toServiceDTO(ServiceOffering service) {
@@ -150,7 +156,10 @@ public class ProfessionalMapper {
                     .orElseGet(() -> {
                         Subcategory newSubcat = new Subcategory();
                         newSubcat.setName(subcatDTO.getName());
-                        newSubcat.setCategory(subcatDTO.getCategory());
+                        if (subcatDTO.getCategory() != null) {
+                            categoryRepository.findByName(subcatDTO.getCategory())
+                                .ifPresent(newSubcat::setCategory);
+                        }
                         return subcategoryRepository.save(newSubcat);
                     });
                 entity.getSubcategories().add(subcategory);

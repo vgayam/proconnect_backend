@@ -88,9 +88,15 @@ public class Professional {
     @Column(length = 30)
     private String whatsapp;
 
-    /** Primary category — e.g. "Plumbing" */
-    @Column(length = 100)
-    private String category;
+    /** Primary category — FK to categories table */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    /** Convenience getter for the category name string */
+    public String getCategoryName() {
+        return category != null ? category.getName() : null;
+    }
 
     /**
      * Weighted tsvector maintained by PostgreSQL trigger.
