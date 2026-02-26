@@ -366,281 +366,154 @@ JOIN categories c ON c.name = v.cat_name
 ON CONFLICT (name) DO NOTHING ^^
 
 -- ============================================================
--- SEED PROFESSIONALS — Bengaluru, India
+-- SEED PROFESSIONALS
+-- Each row uses a scalar subquery for category_id — clean, explicit, no type-casting tricks.
 -- ============================================================
-INSERT INTO professionals
-    (first_name, last_name, display_name, headline, bio,
-     city, state, country, remote, is_verified, is_available,
-     rating, review_count, hourly_rate_min, hourly_rate_max, currency,
-     email, phone, category_id)
-SELECT v.first_name, v.last_name, v.display_name, v.headline, v.bio,
-       v.city, v.state, v.country, v.remote, v.is_verified, v.is_available,
-       v.rating, v.review_count, v.hourly_rate_min, v.hourly_rate_max, v.currency,
-       v.email, v.phone,
-       (SELECT id FROM categories WHERE name = v.cat_name)
-FROM (VALUES
-('Arjun',   'Sharma',   'Arjun Sharma',
- 'Senior Full-Stack Developer | React + Spring Boot',
- 'Ex-Flipkart engineer with 8 years building scalable web apps. Specialises in React, Spring Boot, and AWS. Open to freelance projects and consulting.',
- 'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.9, 134, 1500, 3000, 'INR', 'arjun.sharma@example.com', '+919900011111', 'Technology'),
-('Ravi',    'Kumar',    'Ravi Kumar',
- 'Certified Electrician | Domestic & Commercial Wiring',
- 'Licensed electrician with 12 years of experience in Bengaluru. Expert in solar panel installation, inverter setup, and MCB repairs. Available on weekends.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.7, 98, 300, 700, 'INR', 'ravi.kumar@example.com', '+919900022222', 'Electrical'),
-('Priya',   'Nair',     'Priya Nair',
- 'Interior Designer | Modular Kitchens & Living Spaces',
- 'Award-winning interior designer based in Whitefield. 10+ years transforming homes and offices. Specialist in Scandinavian and Indo-contemporary styles.',
- 'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.8, 76, 2000, 5000, 'INR', 'priya.nair@example.com', '+919900033333', 'Interior Design'),
-('Meena',   'Iyer',     'Meena Iyer',
- 'Certified Yoga & Meditation Instructor | 500-hr RYT',
- 'Hatha and Vinyasa yoga teacher with 7 years of experience. Conducts group and personal sessions from Indiranagar studio. Online sessions also available.',
- 'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.9, 210, 400, 800, 'INR', 'meena.iyer@example.com', '+919900044444', 'Fitness'),
-('Suresh',  'Babu',     'Suresh Babu',
- 'Expert Plumber | Residential & Commercial',
- 'Experienced plumber covering Koramangala, HSR Layout, and BTM. Handles pipe leaks, drain cleaning, tap replacement, and overhead tank cleaning.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.6, 87, 200, 500, 'INR', 'suresh.babu@example.com', '+919900055555', 'Plumbing'),
-('Deepika', 'Rao',      'Deepika Rao',
- 'Wedding & Portrait Photographer | Candid Specialist',
- 'Capturing stories one frame at a time. 6 years shooting weddings, pre-weddings, and corporate events across Bengaluru and Mysuru.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.8, 163, 5000, 20000, 'INR', 'deepika.rao@example.com', '+919900066666', 'Photography'),
-('Mohan',   'Das',      'Mohan Das',
- 'AC & HVAC Technician | All Brands Serviced',
- 'Certified HVAC technician with experience on Daikin, Voltas, LG, and Samsung units. Same-day service available in south and east Bengaluru.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.5, 142, 350, 800, 'INR', 'mohan.das@example.com', '+919900077777', 'HVAC'),
-('Ananya',  'Krishnan', 'Ananya Krishnan',
- 'UI/UX & Brand Designer | Figma Expert',
- 'Freelance designer with 5 years at product startups. Proficient in Figma, Adobe XD, and Illustrator. Helped 30+ Bengaluru startups launch their visual identity.',
- 'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.9, 91, 800, 2000, 'INR', 'ananya.k@example.com', '+919900088888', 'Graphic Design'),
-('Vikram',  'Hegde',    'Vikram Hegde',
- 'Math & Science Tutor | CBSE / ICSE / PUC',
- 'Post-graduate in Mathematics, 9 years tutoring students from Grade 6 to PUC. Excellent track record with board-exam results. Available in Jayanagar area.',
- 'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.8, 54, 300, 600, 'INR', 'vikram.hegde@example.com', '+919900099999', 'Education'),
-('Ramesh',  'Gowda',    'Ramesh Gowda',
- 'Master Carpenter | Modular Kitchens & Wardrobes',
- 'Skilled carpenter with 15 years of experience. Expert in modular kitchen fabrication, wardrobe installations, and custom furniture. Works across north Bengaluru.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.7, 119, 400, 900, 'INR', 'ramesh.gowda@example.com', '+919900010101', 'Carpentry'),
-('Kavitha', 'Reddy',    'Kavitha Reddy',
- 'Professional Home & Deep Cleaning Services',
- 'Running a trusted home cleaning service in Bengaluru since 2015. Team of 8 trained staff. Specialises in deep cleaning, sofa/carpet cleaning, and move-out cleans.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.6, 207, 500, 1500, 'INR', 'kavitha.reddy@example.com', '+919900010202', 'Cleaning'),
-('Nikhil',  'Patel',    'Nikhil Patel',
- 'Flutter Developer & DevOps Engineer | GCP / AWS',
- 'Full-stack mobile developer with 6 years building Flutter apps on Play Store and App Store. Also handles CI/CD pipelines and cloud deployments.',
- 'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.8, 67, 1200, 2500, 'INR', 'nikhil.patel@example.com', '+919900010303', 'Technology')
-) AS v(first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available,
-       rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, cat_name)
-ON CONFLICT (email) DO NOTHING ^^
+
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Arjun',     'Sharma',        'Arjun Sharma',        'Senior Full-Stack Developer | React + Spring Boot',          'Ex-Flipkart engineer with 8 years building scalable web apps. Specialises in React, Spring Boot, and AWS. Open to freelance projects and consulting.',                                                                                         'Bengaluru','Karnataka','India', true,  true, true, 4.9, 134,  1500,  3000,  'INR', 'arjun.sharma@example.com',    '+919900011111', (SELECT id FROM categories WHERE name='Technology'))      ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Ravi',      'Kumar',         'Ravi Kumar',          'Certified Electrician | Domestic & Commercial Wiring',       'Licensed electrician with 12 years of experience in Bengaluru. Expert in solar panel installation, inverter setup, and MCB repairs. Available on weekends.',                                                                               'Bengaluru','Karnataka','India', false, true, true, 4.7,  98,   300,   700,   'INR', 'ravi.kumar@example.com',      '+919900022222', (SELECT id FROM categories WHERE name='Electrical'))     ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Priya',     'Nair',          'Priya Nair',          'Interior Designer | Modular Kitchens & Living Spaces',       'Award-winning interior designer based in Whitefield. 10+ years transforming homes and offices. Specialist in Scandinavian and Indo-contemporary styles.',                                                                                 'Bengaluru','Karnataka','India', true,  true, true, 4.8,  76,  2000,  5000,  'INR', 'priya.nair@example.com',      '+919900033333', (SELECT id FROM categories WHERE name='Interior Design')) ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Meena',     'Iyer',          'Meena Iyer',          'Certified Yoga & Meditation Instructor | 500-hr RYT',        'Hatha and Vinyasa yoga teacher with 7 years of experience. Conducts group and personal sessions from Indiranagar studio. Online sessions also available.',                                                                               'Bengaluru','Karnataka','India', true,  true, true, 4.9, 210,   400,   800,   'INR', 'meena.iyer@example.com',      '+919900044444', (SELECT id FROM categories WHERE name='Fitness'))        ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Suresh',    'Babu',          'Suresh Babu',         'Expert Plumber | Residential & Commercial',                  'Experienced plumber covering Koramangala, HSR Layout, and BTM. Handles pipe leaks, drain cleaning, tap replacement, and overhead tank cleaning.',                                                                                        'Bengaluru','Karnataka','India', false, true, true, 4.6,  87,   200,   500,   'INR', 'suresh.babu@example.com',     '+919900055555', (SELECT id FROM categories WHERE name='Plumbing'))       ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Deepika',   'Rao',           'Deepika Rao',         'Wedding & Portrait Photographer | Candid Specialist',        'Capturing stories one frame at a time. 6 years shooting weddings, pre-weddings, and corporate events across Bengaluru and Mysuru.',                                                                                                       'Bengaluru','Karnataka','India', false, true, true, 4.8, 163,  5000, 20000,  'INR', 'deepika.rao@example.com',     '+919900066666', (SELECT id FROM categories WHERE name='Photography'))    ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Mohan',     'Das',           'Mohan Das',           'AC & HVAC Technician | All Brands Serviced',                 'Certified HVAC technician with experience on Daikin, Voltas, LG, and Samsung units. Same-day service available in south and east Bengaluru.',                                                                                            'Bengaluru','Karnataka','India', false, true, true, 4.5, 142,   350,   800,   'INR', 'mohan.das@example.com',       '+919900077777', (SELECT id FROM categories WHERE name='HVAC'))           ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Ananya',    'Krishnan',      'Ananya Krishnan',     'UI/UX & Brand Designer | Figma Expert',                      'Freelance designer with 5 years at product startups. Proficient in Figma, Adobe XD, and Illustrator. Helped 30+ Bengaluru startups launch their visual identity.',                                                                       'Bengaluru','Karnataka','India', true,  true, true, 4.9,  91,   800,  2000,  'INR', 'ananya.k@example.com',        '+919900088888', (SELECT id FROM categories WHERE name='Graphic Design'))  ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Vikram',    'Hegde',         'Vikram Hegde',        'Math & Science Tutor | CBSE / ICSE / PUC',                   'Post-graduate in Mathematics, 9 years tutoring students from Grade 6 to PUC. Excellent track record with board-exam results. Available in Jayanagar area.',                                                                               'Bengaluru','Karnataka','India', true,  true, true, 4.8,  54,   300,   600,   'INR', 'vikram.hegde@example.com',    '+919900099999', (SELECT id FROM categories WHERE name='Education'))      ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Ramesh',    'Gowda',         'Ramesh Gowda',        'Master Carpenter | Modular Kitchens & Wardrobes',            'Skilled carpenter with 15 years of experience. Expert in modular kitchen fabrication, wardrobe installations, and custom furniture. Works across north Bengaluru.',                                                                        'Bengaluru','Karnataka','India', false, true, true, 4.7, 119,   400,   900,   'INR', 'ramesh.gowda@example.com',    '+919900010101', (SELECT id FROM categories WHERE name='Carpentry'))      ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Kavitha',   'Reddy',         'Kavitha Reddy',       'Professional Home & Deep Cleaning Services',                 'Running a trusted home cleaning service in Bengaluru since 2015. Team of 8 trained staff. Specialises in deep cleaning, sofa/carpet cleaning, and move-out cleans.',                                                                       'Bengaluru','Karnataka','India', false, true, true, 4.6, 207,   500,  1500,  'INR', 'kavitha.reddy@example.com',   '+919900010202', (SELECT id FROM categories WHERE name='Cleaning'))       ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Nikhil',    'Patel',         'Nikhil Patel',        'Flutter Developer & DevOps Engineer | GCP / AWS',            'Full-stack mobile developer with 6 years building Flutter apps on Play Store and App Store. Also handles CI/CD pipelines and cloud deployments.',                                                                                           'Bengaluru','Karnataka','India', true,  true, true, 4.8,  67,  1200,  2500,  'INR', 'nikhil.patel@example.com',    '+919900010303', (SELECT id FROM categories WHERE name='Technology'))      ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Sanjay',    'Verma',         'Sanjay Verma',        'Pest Control Specialist | Residential & Commercial',         'Certified pest control expert serving Bengaluru since 2012. Provides eco-friendly treatment for cockroaches, termites, rodents, and bed bugs. Covers all major areas including Whitefield, Marathahalli, and Electronic City.',             'Bengaluru','Karnataka','India', false, true, true, 4.7, 188,   500,  1800,  'INR', 'sanjay.verma@example.com',    '+919900010404', (SELECT id FROM categories WHERE name='Pest Control'))   ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Lakshmi',   'Subramaniam',   'Lakshmi Subramaniam', 'Bridal Makeup Artist & Mehendi Designer',                    'Professional makeup artist and mehendi designer with 9 years of experience. Specialises in South Indian bridal looks, Tamil Nadu-style mehendi, and pre-wedding grooming. Travels across Karnataka and Tamil Nadu.',                       'Bengaluru','Karnataka','India', false, true, true, 4.9, 312,  3000, 15000,  'INR', 'lakshmi.subra@example.com',   '+919900010505', (SELECT id FROM categories WHERE name='Beauty & Wellness')) ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Arun',      'Nayak',         'Arun Nayak',          'Exterior & Waterproofing Painter | 10+ Years',               'Skilled painter specialising in exterior weather-shield painting and terrace waterproofing. Trusted by housing societies across Bengaluru. Uses premium Berger and Asian Paints products.',                                                   'Bengaluru','Karnataka','India', false, true, true, 4.6, 143,   250,   600,   'INR', 'arun.nayak@example.com',      '+919900010606', (SELECT id FROM categories WHERE name='Painting'))       ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Pooja',     'Menon',         'Pooja Menon',         'Certified Nutritionist & Diet Coach | Weight Management',    'MSc Nutrition and Dietetics. Helps clients achieve weight loss, sports performance, and disease-specific goals. Offers personalised meal plans and online follow-up consultations.',                                                         'Bengaluru','Karnataka','India', true,  true, true, 4.8,  97,   600,  1500,  'INR', 'pooja.menon@example.com',     '+919900010707', (SELECT id FROM categories WHERE name='Fitness'))        ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Girish',    'Shetty',        'Girish Shetty',       'Two-Wheeler Mechanic | All Makes & Models',                  'Expert two-wheeler mechanic with 13 years in Bengaluru. Proficient with Honda, Bajaj, Royal Enfield, and Hero bikes. Provides doorstep bike servicing in Banashankari, Jayanagar, and BTM Layout.',                                       'Bengaluru','Karnataka','India', false, true, true, 4.7, 229,   200,   600,   'INR', 'girish.shetty@example.com',   '+919900010808', (SELECT id FROM categories WHERE name='Vehicle'))        ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Sneha',     'Pillai',        'Sneha Pillai',        'Landscape Designer | Terrace Gardens & Lawns',               'Landscape architect with 8 years creating beautiful outdoor spaces in Bengaluru villas and apartment complexes. Specialises in terrace gardens, vertical green walls, and sustainable garden design.',                                       'Bengaluru','Karnataka','India', false, true, true, 4.8,  61,  1500,  4000,  'INR', 'sneha.pillai@example.com',    '+919900010909', (SELECT id FROM categories WHERE name='Landscaping'))    ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Kiran',     'Bhat',          'Kiran Bhat',          'Handyman & Home Repair Expert | Tile, Flooring & More',      'All-round handyman serving north and central Bengaluru. Handles tile fixing, false ceiling, furniture assembly, appliance repair, and general home maintenance. Quick response guaranteed.',                                                  'Bengaluru','Karnataka','India', false, true, true, 4.5, 174,   300,   700,   'INR', 'kiran.bhat@example.com',      '+919900011010', (SELECT id FROM categories WHERE name='Handyman'))       ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Divya',     'Kamath',        'Divya Kamath',        'Commercial Photographer | Product & Corporate',              'Freelance commercial photographer with 7 years shooting for e-commerce, food brands, and corporate clients. Equipped with a professional studio setup in Koramangala. Specialises in flat-lay and lifestyle product photography.',          'Bengaluru','Karnataka','India', false, true, true, 4.8,  88,  4000, 15000,  'INR', 'divya.kamath@example.com',    '+919900011111', (SELECT id FROM categories WHERE name='Photography'))    ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Naveen',    'Kulkarni',      'Naveen Kulkarni',     'Data Engineer & ML Engineer | Python & GCP',                 'Senior data engineer with 7 years at Bengaluru product companies. Expert in data pipelines, BigQuery, and TensorFlow. Freelances for startups needing data infrastructure.',                                                                'Bengaluru','Karnataka','India', true,  true, true, 4.9,  73,  1800,  3500,  'INR', 'naveen.kulkarni@example.com', '+919900011212', (SELECT id FROM categories WHERE name='Technology'))      ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Rohit',     'Joshi',         'Rohit Joshi',         'Interior Painter | Texture & Decorative Finishes',           'Specialist in interior painting, texture finishes, and wall murals. Uses low-VOC eco-friendly paints. Completed 200+ projects in Bengaluru apartments and villas across Sarjapur, HSR, and Bellandur.',                                    'Bengaluru','Karnataka','India', false, true, true, 4.6, 116,   200,   500,   'INR', 'rohit.joshi@example.com',     '+919900011313', (SELECT id FROM categories WHERE name='Painting'))       ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Sangeetha', 'Murthy',        'Sangeetha Murthy',    'Spoken English & Kannada Language Tutor',                    'MA in English Literature with 11 years of teaching experience. Helps school and college students improve spoken English, grammar, and communication skills. Also offers Kannada for non-native speakers.',                                    'Bengaluru','Karnataka','India', true,  true, true, 4.8, 142,   250,   500,   'INR', 'sangeetha.murthy@example.com','+919900011414', (SELECT id FROM categories WHERE name='Education'))      ^^
+INSERT INTO professionals (first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available, rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, category_id) VALUES
+('Harish',    'Naidu',         'Harish Naidu',        'Car Repair & Denting Specialist | Multi-Brand',              'Experienced automobile technician with expertise in denting, painting, and general car repair for Maruti, Hyundai, Toyota, and Honda vehicles. Based in Yeshwanthpur with doorstep service across Bengaluru.',                               'Bengaluru','Karnataka','India', false, true, true, 4.6, 198,   500,  2500,  'INR', 'harish.naidu@example.com',    '+919900011515', (SELECT id FROM categories WHERE name='Vehicle'))        ^^
 
 -- ============================================================
 -- LINK SUBCATEGORIES TO PROFESSIONALS
 -- ============================================================
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'arjun.sharma@example.com'
-  AND s.name IN ('React Development','Spring Boot','AWS Cloud','Node.js') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('React Development','Spring Boot','AWS Cloud','Node.js')
+WHERE p.email = 'arjun.sharma@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'ravi.kumar@example.com'
-  AND s.name IN ('Residential Wiring','Solar Panel Installation','Inverter Setup','MCB & Fuse Box Repair') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Residential Wiring','Solar Panel Installation','Inverter Setup','MCB & Fuse Box Repair')
+WHERE p.email = 'ravi.kumar@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'priya.nair@example.com'
-  AND s.name IN ('Residential Design','Space Planning','3D Visualization') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Residential Design','Space Planning','3D Visualization')
+WHERE p.email = 'priya.nair@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'meena.iyer@example.com'
-  AND s.name IN ('Yoga Instruction','Meditation Coaching','Personal Training') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Yoga Instruction','Meditation Coaching','Personal Training')
+WHERE p.email = 'meena.iyer@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'suresh.babu@example.com'
-  AND s.name IN ('Drain Cleaning','Pipe Installation','Tap & Fixture Repair','Overhead Tank Cleaning','Residential Plumbing') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Drain Cleaning','Pipe Installation','Tap & Fixture Repair','Overhead Tank Cleaning','Residential Plumbing')
+WHERE p.email = 'suresh.babu@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'deepika.rao@example.com'
-  AND s.name IN ('Wedding Photography','Portrait Photography','Event Photography') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Wedding Photography','Portrait Photography','Event Photography')
+WHERE p.email = 'deepika.rao@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'mohan.das@example.com'
-  AND s.name IN ('AC Installation','AC Service & Cleaning','Heating Repair','Duct Work') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('AC Installation','AC Service & Cleaning','Heating Repair','Duct Work')
+WHERE p.email = 'mohan.das@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'ananya.k@example.com'
-  AND s.name IN ('UI/UX Design','Figma','Brand Design','Logo Design','Prototyping','User Research') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('UI/UX Design','Figma','Brand Design','Logo Design','Prototyping','User Research')
+WHERE p.email = 'ananya.k@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'vikram.hegde@example.com'
-  AND s.name IN ('Math Tutoring','Science Tutoring','Coding for Kids') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Math Tutoring','Science Tutoring','Coding for Kids')
+WHERE p.email = 'vikram.hegde@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'ramesh.gowda@example.com'
-  AND s.name IN ('Modular Kitchen','Wardrobe Installation','Custom Furniture','Cabinet Making') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Modular Kitchen','Wardrobe Installation','Custom Furniture','Cabinet Making')
+WHERE p.email = 'ramesh.gowda@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'kavitha.reddy@example.com'
-  AND s.name IN ('House Cleaning','Deep Cleaning','Sofa & Carpet Cleaning','Office Cleaning') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('House Cleaning','Deep Cleaning','Sofa & Carpet Cleaning','Office Cleaning')
+WHERE p.email = 'kavitha.reddy@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'nikhil.patel@example.com'
-  AND s.name IN ('Flutter Development','DevOps & CI/CD','AWS Cloud','React Development') ^^
-
--- ============================================================
--- SEED PROFESSIONALS — Bengaluru, India (Batch 2)
--- ============================================================
-INSERT INTO professionals
-    (first_name, last_name, display_name, headline, bio,
-     city, state, country, remote, is_verified, is_available,
-     rating, review_count, hourly_rate_min, hourly_rate_max, currency,
-     email, phone, category_id)
-SELECT v.first_name, v.last_name, v.display_name, v.headline, v.bio,
-       v.city, v.state, v.country, v.remote, v.is_verified, v.is_available,
-       v.rating, v.review_count, v.hourly_rate_min, v.hourly_rate_max, v.currency,
-       v.email, v.phone,
-       (SELECT id FROM categories WHERE name = v.cat_name)
-FROM (VALUES
-('Sanjay',  'Verma',    'Sanjay Verma',
- 'Pest Control Specialist | Residential & Commercial',
- 'Certified pest control expert serving Bengaluru since 2012. Provides eco-friendly treatment for cockroaches, termites, rodents, and bed bugs. Covers all major areas including Whitefield, Marathahalli, and Electronic City.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.7, 188, 500, 1800, 'INR', 'sanjay.verma@example.com', '+919900010404', 'Pest Control'),
-('Lakshmi', 'Subramaniam', 'Lakshmi Subramaniam',
- 'Bridal Makeup Artist & Mehendi Designer',
- 'Professional makeup artist and mehendi designer with 9 years of experience. Specialises in South Indian bridal looks, Tamil Nadu-style mehendi, and pre-wedding grooming. Travels across Karnataka and Tamil Nadu.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.9, 312, 3000, 15000, 'INR', 'lakshmi.subra@example.com', '+919900010505', 'Beauty & Wellness'),
-('Arun',    'Nayak',    'Arun Nayak',
- 'Exterior & Waterproofing Painter | 10+ Years',
- 'Skilled painter specialising in exterior weather-shield painting and terrace waterproofing. Trusted by housing societies across Bengaluru. Uses premium Berger and Asian Paints products.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.6, 143, 250, 600, 'INR', 'arun.nayak@example.com', '+919900010606', 'Painting'),
-('Pooja',   'Menon',    'Pooja Menon',
- 'Certified Nutritionist & Diet Coach | Weight Management',
- 'MSc Nutrition and Dietetics. Helps clients achieve weight loss, sports performance, and disease-specific goals. Offers personalised meal plans and online follow-up consultations.',
- 'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.8, 97, 600, 1500, 'INR', 'pooja.menon@example.com', '+919900010707', 'Fitness'),
-('Girish',  'Shetty',   'Girish Shetty',
- 'Two-Wheeler Mechanic | All Makes & Models',
- 'Expert two-wheeler mechanic with 13 years in Bengaluru. Proficient with Honda, Bajaj, Royal Enfield, and Hero bikes. Provides doorstep bike servicing in Banashankari, Jayanagar, and BTM Layout.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.7, 229, 200, 600, 'INR', 'girish.shetty@example.com', '+919900010808', 'Vehicle'),
-('Sneha',   'Pillai',   'Sneha Pillai',
- 'Landscape Designer | Terrace Gardens & Lawns',
- 'Landscape architect with 8 years creating beautiful outdoor spaces in Bengaluru villas and apartment complexes. Specialises in terrace gardens, vertical green walls, and sustainable garden design.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.8, 61, 1500, 4000, 'INR', 'sneha.pillai@example.com', '+919900010909', 'Landscaping'),
-('Kiran',   'Bhat',     'Kiran Bhat',
- 'Handyman & Home Repair Expert | Tile, Flooring & More',
- 'All-round handyman serving north and central Bengaluru. Handles tile fixing, false ceiling, furniture assembly, appliance repair, and general home maintenance. Quick response guaranteed.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.5, 174, 300, 700, 'INR', 'kiran.bhat@example.com', '+919900011010', 'Handyman'),
-('Divya',   'Kamath',   'Divya Kamath',
- 'Commercial Photographer | Product & Corporate',
- 'Freelance commercial photographer with 7 years shooting for e-commerce, food brands, and corporate clients. Equipped with a professional studio setup in Koramangala. Specialises in flat-lay and lifestyle product photography.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.8, 88, 4000, 15000, 'INR', 'divya.kamath@example.com', '+919900011111', 'Photography'),
-('Naveen',  'Kulkarni', 'Naveen Kulkarni',
- 'Data Engineer & ML Engineer | Python & GCP',
- 'Senior data engineer with 7 years at Bengaluru product companies. Expert in data pipelines, BigQuery, and TensorFlow. Freelances for startups needing data infrastructure.',
- 'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.9, 73, 1800, 3500, 'INR', 'naveen.kulkarni@example.com', '+919900011212', 'Technology'),
-('Rohit',   'Joshi',    'Rohit Joshi',
- 'Interior Painter | Texture & Decorative Finishes',
- 'Specialist in interior painting, texture finishes, and wall murals. Uses low-VOC eco-friendly paints. Completed 200+ projects in Bengaluru apartments and villas across Sarjapur, HSR, and Bellandur.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.6, 116, 200, 500, 'INR', 'rohit.joshi@example.com', '+919900011313', 'Painting'),
-('Sangeetha','Murthy',  'Sangeetha Murthy',
- 'Spoken English & Kannada Language Tutor',
- 'MA in English Literature with 11 years of teaching experience. Helps school and college students improve spoken English, grammar, and communication skills. Also offers Kannada for non-native speakers.',
- 'Bengaluru', 'Karnataka', 'India', true, true, true,
- 4.8, 142, 250, 500, 'INR', 'sangeetha.murthy@example.com', '+919900011414', 'Education'),
-('Harish',  'Naidu',    'Harish Naidu',
- 'Car Repair & Denting Specialist | Multi-Brand',
- 'Experienced automobile technician with expertise in denting, painting, and general car repair for Maruti, Hyundai, Toyota, and Honda vehicles. Based in Yeshwanthpur with doorstep service across Bengaluru.',
- 'Bengaluru', 'Karnataka', 'India', false, true, true,
- 4.6, 198, 500, 2500, 'INR', 'harish.naidu@example.com', '+919900011515', 'Vehicle')
-) AS v(first_name, last_name, display_name, headline, bio, city, state, country, remote, is_verified, is_available,
-       rating, review_count, hourly_rate_min, hourly_rate_max, currency, email, phone, cat_name)
-ON CONFLICT (email) DO NOTHING ^^
-
--- LINK SUBCATEGORIES — Batch 2
-INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'sanjay.verma@example.com'
-  AND s.name IN ('Cockroach Treatment','Termite Treatment','Rodent Control') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Flutter Development','DevOps & CI/CD','AWS Cloud','React Development')
+WHERE p.email = 'nikhil.patel@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'lakshmi.subra@example.com'
-  AND s.name IN ('Bridal Makeup','Mehendi','Haircut & Styling','Spa & Massage') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Cockroach Treatment','Termite Treatment','Rodent Control')
+WHERE p.email = 'sanjay.verma@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'arun.nayak@example.com'
-  AND s.name IN ('Exterior Painting','Waterproofing','Interior Painting') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Bridal Makeup','Mehendi','Haircut & Styling','Spa & Massage')
+WHERE p.email = 'lakshmi.subra@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'pooja.menon@example.com'
-  AND s.name IN ('Nutrition Coaching','Personal Training','Meditation Coaching') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Exterior Painting','Waterproofing','Interior Painting')
+WHERE p.email = 'arun.nayak@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'girish.shetty@example.com'
-  AND s.name IN ('Bike Service') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Nutrition Coaching','Personal Training','Meditation Coaching')
+WHERE p.email = 'pooja.menon@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'sneha.pillai@example.com'
-  AND s.name IN ('Garden Design','Lawn Maintenance','Tree Service') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Bike Service')
+WHERE p.email = 'girish.shetty@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'kiran.bhat@example.com'
-  AND s.name IN ('Tile & Flooring','Furniture Assembly','Appliance Repair','General Repairs') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Garden Design','Lawn Maintenance','Tree Service')
+WHERE p.email = 'sneha.pillai@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'divya.kamath@example.com'
-  AND s.name IN ('Commercial Photography','Portrait Photography','Event Photography') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Tile & Flooring','Furniture Assembly','Appliance Repair','General Repairs')
+WHERE p.email = 'kiran.bhat@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'naveen.kulkarni@example.com'
-  AND s.name IN ('Data Engineering','Machine Learning','AWS Cloud') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Commercial Photography','Portrait Photography','Event Photography')
+WHERE p.email = 'divya.kamath@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'rohit.joshi@example.com'
-  AND s.name IN ('Interior Painting','Commercial Painting','Waterproofing') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Data Engineering','Machine Learning','AWS Cloud')
+WHERE p.email = 'naveen.kulkarni@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'sangeetha.murthy@example.com'
-  AND s.name IN ('Language Tutoring','Math Tutoring') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Interior Painting','Commercial Painting','Waterproofing')
+WHERE p.email = 'rohit.joshi@example.com' ^^
 
 INSERT INTO professional_subcategories (professional_id, subcategory_id)
-SELECT p.id, s.id FROM professionals p, subcategories s
-WHERE p.email = 'harish.naidu@example.com'
-  AND s.name IN ('Car Repair','Denting & Painting') ^^
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Language Tutoring','Math Tutoring')
+WHERE p.email = 'sangeetha.murthy@example.com' ^^
+
+INSERT INTO professional_subcategories (professional_id, subcategory_id)
+SELECT p.id, s.id FROM professionals p JOIN subcategories s ON s.name IN ('Car Repair','Denting & Painting')
+WHERE p.email = 'harish.naidu@example.com' ^^
