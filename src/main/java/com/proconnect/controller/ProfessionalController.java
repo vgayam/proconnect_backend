@@ -120,6 +120,17 @@ public class ProfessionalController {
     }
 
     /**
+     * GET /api/professionals/me — return the logged-in professional's full profile.
+     * Requires JWT authentication.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ProfessionalDTO> getMyProfile(
+            @AuthenticationPrincipal Long professionalId) {
+        log.info("GET /api/professionals/me — professionalId={}", professionalId);
+        return ResponseEntity.ok(professionalService.getProfessionalById(professionalId));
+    }
+
+    /**
      * PUT /api/professionals/me — update the logged-in professional's full profile.
      * Requires JWT authentication.
      */
