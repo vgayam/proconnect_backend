@@ -103,24 +103,26 @@ public class AuthController {
      */
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie("proconnect_token", "");
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        cookie.setSecure(cookieSecure);
-        response.addCookie(cookie);
+        String cookieHeader = String.format(
+            "proconnect_token=; Max-Age=0; Path=/; HttpOnly; %sSameSite=None",
+            cookieSecure ? "Secure; " : ""
+        );
+        response.addHeader("Set-Cookie", cookieHeader);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
     // ─── helpers ─────────────────────────────────────────────────────────────
 
     private void addTokenCookie(HttpServletResponse response, String token) {
-        Cookie cookie = new Cookie("proconnect_token", token);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(jwtExpiryDays * 24 * 60 * 60);
-        cookie.setSecure(cookieSecure);
-        response.addCookie(cookie);
+        int maxAge = jwtExpiryDays * 24 * 60 * 60;
+        // Build Set-Cookie header manually to include SameSite=None
+        // SameSite=None; Secure is required for cross-domain cookies (Vercel → Render)
+        String cookieHeader = String.format(
+            "proconnect_token=%s; Max-Age=%d; Path=/; HttpOnly; %sSameSite=None",
+            token, maxAge,
+            cookieSecure ? "Secure; " : ""
+        );
+        response.addHeader("Set-Cookie", cookieHeader);
     }
 
     private AuthResponseDTO toAuthResponse(Professional p) {
