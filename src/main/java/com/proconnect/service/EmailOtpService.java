@@ -33,23 +33,27 @@ public class EmailOtpService {
 
     @Transactional
     public void sendOtp(String email) {
-        // Invalidate any outstanding OTPs for this email
-        emailOtpRepository.invalidateAll(email);
+        String normalizedEmail = email.toLowerCase().trim();
 
+        // Generate code first
         String code = String.format("%06d", RANDOM.nextInt(1_000_000));
 
+        if (devMode) {
+            log.info("===== [DEV MODE] OTP for {} => {} (valid {}min) =====", normalizedEmail, code, OTP_TTL_MINUTES);
+        } else {
+            // Send email BEFORE saving to DB — if email fails, nothing is saved
+            sendEmail(normalizedEmail, code);
+        }
+
+        // Only reach here if email sent successfully (or dev mode)
+        emailOtpRepository.invalidateAll(normalizedEmail);
+
         EmailOtp otp = new EmailOtp();
-        otp.setEmail(email.toLowerCase().trim());
+        otp.setEmail(normalizedEmail);
         otp.setOtpCode(code);
         otp.setVerified(false);
         otp.setExpiresAt(LocalDateTime.now().plusMinutes(OTP_TTL_MINUTES));
         emailOtpRepository.save(otp);
-
-        if (devMode) {
-            log.info("===== [DEV MODE] OTP for {} => {} (valid {}min) =====", email, code, OTP_TTL_MINUTES);
-        } else {
-            sendEmail(email, code);
-        }
     }
 
     @Transactional
