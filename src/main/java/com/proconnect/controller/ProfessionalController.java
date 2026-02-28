@@ -37,7 +37,7 @@ public class ProfessionalController {
         @RequestParam(required = false)                     String       state,
         @RequestParam(required = false)                     String       country,
         @RequestParam(required = false)                     Boolean      remote,
-        @RequestParam(required = false)                     Boolean      available,
+        @RequestParam(required = false, defaultValue = "true") Boolean   available,
         @RequestParam(required = false)                     List<String> subcategories,
         @RequestParam(required = false)                     List<String> skills,      // legacy alias
         @RequestParam(required = false)                     List<String> categories,  // multi-value
