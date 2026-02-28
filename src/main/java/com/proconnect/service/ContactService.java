@@ -12,6 +12,7 @@ import com.proconnect.repository.ContactViewRepository;
 import com.proconnect.repository.ProfessionalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,10 @@ public class ContactService {
     private final ProfessionalRepository professionalRepository;
     private final ContactViewRepository contactViewRepository;
     private final EmailOtpService emailOtpService;
+
+    /** Set NOTIFY_PROFESSIONAL_ON_CONTACT=true in env to enable lead notifications. */
+    @Value("${app.contact.notify-professional:false}")
+    private boolean notifyProfessional;
 
     @Transactional
     public void sendContactMessage(Long professionalId, ContactMessageDTO dto) {
@@ -85,6 +90,15 @@ public class ContactService {
                 .build());
 
         log.info("Contact details revealed to {} for professional {}", viewerEmail, professionalId);
+
+        // Notify the professional about the lead (feature-flagged, default off)
+        if (notifyProfessional && professional.getEmail() != null) {
+            emailOtpService.sendContactViewedNotification(
+                professional.getEmail(),
+                professional.getDisplayName(),
+                viewerEmail
+            );
+        }
 
         return new ProfessionalContactDTO(
                 professional.getEmail(),

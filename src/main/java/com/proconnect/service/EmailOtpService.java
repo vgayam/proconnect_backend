@@ -68,6 +68,38 @@ public class EmailOtpService {
             .orElse(false);
     }
 
+    public void sendContactViewedNotification(String professionalEmail,
+                                               String professionalName,
+                                               String viewerEmail) {
+        if (devMode) {
+            log.info("DEV MODE — contact view notification skipped: professional={}, viewer={}",
+                professionalEmail, viewerEmail);
+            return;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(fromAddress);
+            msg.setTo(professionalEmail);
+            msg.setSubject("Someone viewed your contact details on ProConnect");
+            msg.setText("""
+                Hi %s,
+
+                Good news! Someone is interested in your services.
+
+                A user with email %s just viewed your contact details on ProConnect.
+
+                They may reach out to you directly — or you can reach out to them first!
+
+                — The ProConnect Team
+                """.formatted(professionalName != null ? professionalName : "there", viewerEmail));
+            mailSender.send(msg);
+            log.info("Contact view notification sent to professional {}", professionalEmail);
+        } catch (Exception e) {
+            log.warn("Failed to send contact view notification to {}: {}", professionalEmail, e.getMessage());
+            // intentionally not re-throwing — notification failure must not break the main flow
+        }
+    }
+
     private void sendEmail(String toEmail, String code) {
         try {
             SimpleMailMessage msg = new SimpleMailMessage();
