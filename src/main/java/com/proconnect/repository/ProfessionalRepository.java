@@ -18,6 +18,8 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
 
     boolean existsByEmailIgnoreCase(String email);
 
+    boolean existsByPhone(String phone);
+
     List<Professional> findByCity(String city);
 
     List<Professional> findByIsAvailable(Boolean isAvailable);

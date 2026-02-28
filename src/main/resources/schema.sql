@@ -223,6 +223,15 @@ CREATE INDEX IF NOT EXISTS idx_contact_views_ip_date       ON contact_views (vie
 -- ============================================================
 ALTER TABLE professionals ADD COLUMN IF NOT EXISTS latitude  DECIMAL(9,6) ^^
 ALTER TABLE professionals ADD COLUMN IF NOT EXISTS longitude DECIMAL(9,6) ^^
+-- Unique phone constraint — safe to run multiple times via DO block
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'professionals_phone_key' AND conrelid = 'professionals'::regclass
+  ) THEN
+    ALTER TABLE professionals ADD CONSTRAINT professionals_phone_key UNIQUE (phone);
+  END IF;
+END $$ ^^
 
 -- ============================================================
 -- FTS TRIGGER  (CREATE OR REPLACE — always idempotent)

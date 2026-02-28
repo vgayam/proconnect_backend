@@ -2,6 +2,7 @@ package com.proconnect.service;
 
 import com.proconnect.dto.*;
 import com.proconnect.entity.Professional;
+import com.proconnect.exception.DuplicateResourceException;
 import com.proconnect.exception.ResourceNotFoundException;
 import com.proconnect.mapper.ProfessionalMapper;
 import com.proconnect.repository.ProfessionalRepository;
@@ -48,6 +49,21 @@ public class ProfessionalService {
 
     @Transactional
     public ProfessionalDTO createProfessional(ProfessionalDTO dto) {
+        // Reject duplicate email
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()
+                && professionalRepository.existsByEmailIgnoreCase(dto.getEmail().trim())) {
+            throw new DuplicateResourceException(
+                "A profile with this email already exists. Please log in or use a different email.");
+        }
+        // Reject duplicate phone
+        if (dto.getPhone() != null && !dto.getPhone().isBlank()) {
+            String normalizedPhone = dto.getPhone().replaceAll("[^+\\d]", "");
+            if (professionalRepository.existsByPhone(normalizedPhone)) {
+                throw new DuplicateResourceException(
+                    "A profile with this phone number already exists. Please log in or use a different number.");
+            }
+            dto.setPhone(normalizedPhone);
+        }
         Professional professional = professionalMapper.toEntity(dto);
         Professional saved = professionalRepository.save(professional);
         return professionalMapper.toDTO(saved);
