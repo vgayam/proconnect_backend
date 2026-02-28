@@ -50,5 +50,7 @@ public class ProfessionalDTO {
         private String state;
         private String country;
         private Boolean remote;
+        private BigDecimal latitude;
+        private BigDecimal longitude;
     }
 }

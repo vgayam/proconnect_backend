@@ -219,6 +219,12 @@ CREATE INDEX IF NOT EXISTS idx_contact_views_email_date    ON contact_views (vie
 CREATE INDEX IF NOT EXISTS idx_contact_views_ip_date       ON contact_views (viewer_ip,    viewed_at) ^^
 
 -- ============================================================
+-- MIGRATIONS  (ADD COLUMN IF NOT EXISTS — idempotent)
+-- ============================================================
+ALTER TABLE professionals ADD COLUMN IF NOT EXISTS latitude  DECIMAL(9,6) ^^
+ALTER TABLE professionals ADD COLUMN IF NOT EXISTS longitude DECIMAL(9,6) ^^
+
+-- ============================================================
 -- FTS TRIGGER  (CREATE OR REPLACE — always idempotent)
 -- ============================================================
 CREATE OR REPLACE FUNCTION professionals_search_vector_update() RETURNS trigger AS $$

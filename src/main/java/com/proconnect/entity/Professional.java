@@ -58,6 +58,12 @@ public class Professional {
     @Column(nullable = false)
     private Boolean remote = false;
 
+    @Column(name = "latitude", precision = 9, scale = 6)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 9, scale = 6)
+    private BigDecimal longitude;
+
     @Column(name = "is_verified")
     private Boolean isVerified = false;
 

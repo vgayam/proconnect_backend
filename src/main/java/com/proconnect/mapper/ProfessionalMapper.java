@@ -115,6 +115,8 @@ public class ProfessionalMapper {
         location.setState(entity.getState());
         location.setCountry(entity.getCountry());
         location.setRemote(entity.getRemote());
+        location.setLatitude(entity.getLatitude());
+        location.setLongitude(entity.getLongitude());
         return location;
     }
 
@@ -145,6 +147,8 @@ public class ProfessionalMapper {
             entity.setState(location.getState());
             entity.setCountry(location.getCountry());
             entity.setRemote(location.getRemote());
+            if (location.getLatitude() != null)  entity.setLatitude(location.getLatitude());
+            if (location.getLongitude() != null) entity.setLongitude(location.getLongitude());
         }
     }
 
