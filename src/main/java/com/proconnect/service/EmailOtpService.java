@@ -100,6 +100,40 @@ public class EmailOtpService {
         }
     }
 
+    public void sendReviewRequestEmail(String clientEmail, String professionalName,
+                                        String reviewLink) {
+        if (devMode) {
+            log.info("===== [DEV MODE] Review request for {} => {} =====", clientEmail, reviewLink);
+            return;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(fromAddress);
+            msg.setTo(clientEmail);
+            msg.setSubject("How was your experience with " + professionalName + "? Leave a review");
+            msg.setText("""
+                Hi,
+
+                You recently connected with %s on ProConnect.
+
+                If you had a chance to work with them, we'd love to hear about your experience.
+                Your review helps others in the community make informed decisions.
+
+                Leave your review here:
+                %s
+
+                This link is valid for 30 days and can only be used once.
+
+                — The ProConnect Team
+                """.formatted(professionalName, reviewLink));
+            mailSender.send(msg);
+            log.info("Review request email sent to {} for professional {}", clientEmail, professionalName);
+        } catch (Exception e) {
+            log.warn("Failed to send review request email to {}: {}", clientEmail, e.getMessage());
+            // intentionally not re-throwing — review request failure must not break the main flow
+        }
+    }
+
     private void sendEmail(String toEmail, String code) {
         try {
             SimpleMailMessage msg = new SimpleMailMessage();

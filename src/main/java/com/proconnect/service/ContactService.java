@@ -2,11 +2,13 @@ package com.proconnect.service;
 
 import com.proconnect.dto.ContactMessageDTO;
 import com.proconnect.dto.ProfessionalContactDTO;
+import com.proconnect.entity.BookingInquiry;
 import com.proconnect.entity.ContactMessage;
 import com.proconnect.entity.ContactView;
 import com.proconnect.entity.Professional;
 import com.proconnect.exception.RateLimitException;
 import com.proconnect.exception.ResourceNotFoundException;
+import com.proconnect.repository.BookingInquiryRepository;
 import com.proconnect.repository.ContactMessageRepository;
 import com.proconnect.repository.ContactViewRepository;
 import com.proconnect.repository.ProfessionalRepository;
@@ -16,8 +18,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
 
 @Slf4j
 @Service
@@ -25,15 +30,21 @@ import java.time.temporal.ChronoUnit;
 public class ContactService {
 
     private static final int MAX_VIEWS_PER_24H = 2;
+    private static final int REVIEW_TOKEN_EXPIRY_DAYS = 30;
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final ContactMessageRepository contactMessageRepository;
     private final ProfessionalRepository professionalRepository;
     private final ContactViewRepository contactViewRepository;
+    private final BookingInquiryRepository bookingInquiryRepository;
     private final EmailOtpService emailOtpService;
 
     /** Set NOTIFY_PROFESSIONAL_ON_CONTACT=true in env to enable lead notifications. */
     @Value("${app.contact.notify-professional:false}")
     private boolean notifyProfessional;
+
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
 
     @Transactional
     public void sendContactMessage(Long professionalId, ContactMessageDTO dto) {
@@ -67,7 +78,7 @@ public class ContactService {
     }
 
     /**
-     * Step 2 — verify OTP, record the view, and return contact details.
+     * Step 2 — verify OTP, record the view, issue a review token, and return contact details.
      */
     @Transactional
     public ProfessionalContactDTO verifyContactOtp(Long professionalId, String viewerEmail,
@@ -91,11 +102,29 @@ public class ContactService {
 
         log.info("Contact details revealed to {} for professional {}", viewerEmail, professionalId);
 
-        // Notify the professional about the lead (feature-flagged, default off)
+        // ── Issue a review token so the client can leave a review later ──────
+        String reviewToken = generateReviewToken();
+        BookingInquiry inquiry = new BookingInquiry();
+        inquiry.setProfessional(professional);
+        inquiry.setCustomerName(viewerEmail); // we only have email at this stage
+        inquiry.setCustomerEmail(viewerEmail);
+        inquiry.setReviewToken(reviewToken);
+        inquiry.setTokenUsed(false);
+        inquiry.setTokenExpiresAt(LocalDateTime.now().plusDays(REVIEW_TOKEN_EXPIRY_DAYS));
+        bookingInquiryRepository.save(inquiry);
+
+        String proName = professional.getDisplayName() != null
+                ? professional.getDisplayName() : professional.getFullName();
+        String reviewLink = frontendUrl + "/review/" + reviewToken;
+
+        emailOtpService.sendReviewRequestEmail(viewerEmail, proName, reviewLink);
+        log.info("Review token issued and email sent to {} for professional {}", viewerEmail, professionalId);
+
+        // ── Notify the professional about the lead (feature-flagged, default off) ──
         if (notifyProfessional && professional.getEmail() != null) {
             emailOtpService.sendContactViewedNotification(
                 professional.getEmail(),
-                professional.getDisplayName(),
+                proName,
                 viewerEmail
             );
         }
@@ -129,5 +158,11 @@ public class ContactService {
                         " contact views per 24 hours from this device.");
             }
         }
+    }
+
+    private String generateReviewToken() {
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        return HexFormat.of().formatHex(bytes); // 64-char hex string
     }
 }
