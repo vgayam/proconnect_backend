@@ -181,6 +181,18 @@ CREATE TABLE IF NOT EXISTS reviews (
 ) ^^
 
 -- ============================================================
+-- CONTACT_VIEWS  (rate-limit tracking for contact reveals)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS contact_views (
+    id              BIGSERIAL    PRIMARY KEY,
+    professional_id BIGINT       NOT NULL,
+    viewer_email    TEXT,
+    viewer_ip       TEXT,
+    viewed_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE CASCADE
+) ^^
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_professionals_city          ON professionals(city) ^^
@@ -203,6 +215,8 @@ CREATE INDEX IF NOT EXISTS idx_booking_inquiries_pro       ON booking_inquiries(
 CREATE INDEX IF NOT EXISTS idx_booking_inquiries_token     ON booking_inquiries(review_token) ^^
 CREATE INDEX IF NOT EXISTS idx_reviews_professional        ON reviews(professional_id) ^^
 CREATE INDEX IF NOT EXISTS idx_email_otps_email            ON email_otps(email) ^^
+CREATE INDEX IF NOT EXISTS idx_contact_views_email_date    ON contact_views (viewer_email, viewed_at) ^^
+CREATE INDEX IF NOT EXISTS idx_contact_views_ip_date       ON contact_views (viewer_ip,    viewed_at) ^^
 
 -- ============================================================
 -- FTS TRIGGER  (CREATE OR REPLACE — always idempotent)

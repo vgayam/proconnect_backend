@@ -27,6 +27,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers(HttpMethod.POST, "/api/auth/request-otp", "/api/auth/verify-otp", "/api/auth/logout").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/contact/professionals/*/request-otp").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/contact/professionals/*/verify-otp").permitAll()
                 .requestMatchers(HttpMethod.GET,  "/api/professionals/**").permitAll()
                 .requestMatchers(HttpMethod.GET,  "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET,  "/api/subcategories/**").permitAll()

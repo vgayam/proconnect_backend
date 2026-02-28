@@ -47,6 +47,12 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, "Invalid parameter '" + ex.getName() + "': " + ex.getMessage());
     }
 
+    /** 429 — rate limit exceeded */
+    @ExceptionHandler(RateLimitException.class)
+    public ResponseEntity<Map<String, Object>> handleRateLimit(RateLimitException ex) {
+        return error(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+    }
+
     /** 401 — explicit auth failures thrown from service/controller */
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex) {
