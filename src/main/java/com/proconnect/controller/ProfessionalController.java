@@ -4,6 +4,7 @@ import com.proconnect.dto.AvailabilityDTO;
 import com.proconnect.dto.ProfessionalDTO;
 import com.proconnect.dto.ProfessionalSearchCriteria;
 import com.proconnect.dto.SearchResultDTO;
+import com.proconnect.repository.ContactViewRepository;
 import com.proconnect.service.ProfessionalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -23,6 +26,7 @@ import java.util.Map;
 public class ProfessionalController {
 
     private final ProfessionalService professionalService;
+    private final ContactViewRepository contactViewRepository;
 
     /**
      * Search / list professionals.
@@ -153,5 +157,24 @@ public class ProfessionalController {
         log.info("PATCH /api/professionals/me/availability — professionalId={}, isAvailable={}", professionalId, body.getIsAvailable());
         Boolean updated = professionalService.updateAvailability(professionalId, body.getIsAvailable());
         return ResponseEntity.ok(Map.of("isAvailable", updated));
+    }
+
+    /**
+     * GET /api/professionals/me/stats — dashboard stats for the logged-in professional.
+     * Returns contact reveals and unique lead emails for this week and all-time.
+     */
+    @GetMapping("/me/stats")
+    public ResponseEntity<?> getMyStats(@AuthenticationPrincipal Long professionalId) {
+        log.info("GET /api/professionals/me/stats — professionalId={}", professionalId);
+        Instant weekAgo = Instant.now().minus(7, ChronoUnit.DAYS);
+        long contactRevealsThisWeek = contactViewRepository.countByProfessionalSince(professionalId, weekAgo);
+        long contactRevealsAllTime  = contactViewRepository.countByProfessionalSince(professionalId, Instant.EPOCH);
+        List<String> leadEmails     = contactViewRepository.findDistinctLeadEmailsByProfessional(professionalId);
+        return ResponseEntity.ok(Map.of(
+            "contactRevealsThisWeek", contactRevealsThisWeek,
+            "contactRevealsAllTime",  contactRevealsAllTime,
+            "totalLeads",             leadEmails.size(),
+            "leadEmails",             leadEmails
+        ));
     }
 }
