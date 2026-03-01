@@ -115,7 +115,7 @@ public class ContactService {
 
         String proName = professional.getDisplayName() != null
                 ? professional.getDisplayName() : professional.getFullName();
-        String reviewLink = frontendUrl + "/review/" + reviewToken;
+        String reviewLink = frontendUrl.stripTrailing().replaceAll("/+$", "") + "/review/" + reviewToken;
 
         emailOtpService.sendReviewRequestEmail(viewerEmail, proName, reviewLink);
         log.info("Review token issued and email sent to {} for professional {}", viewerEmail, professionalId);
