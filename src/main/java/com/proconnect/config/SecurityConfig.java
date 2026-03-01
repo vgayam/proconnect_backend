@@ -32,6 +32,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,  "/api/professionals/**").permitAll()
                 .requestMatchers(HttpMethod.GET,  "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET,  "/api/subcategories/**").permitAll()
+                .requestMatchers(HttpMethod.GET,  "/api/reviews/token/**").permitAll()  // review token validation
+                .requestMatchers(HttpMethod.POST, "/api/reviews/token/**").permitAll()  // review submission
+                .requestMatchers(HttpMethod.GET,  "/api/professionals/*/reviews").permitAll() // public reviews
                 .requestMatchers(HttpMethod.POST, "/api/professionals").permitAll()   // public registration
                 .requestMatchers("/actuator/**").permitAll()
                 // Protected endpoints — require JWT
