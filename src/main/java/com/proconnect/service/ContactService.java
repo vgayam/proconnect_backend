@@ -106,7 +106,7 @@ public class ContactService {
         String reviewToken = generateReviewToken();
         BookingInquiry inquiry = new BookingInquiry();
         inquiry.setProfessional(professional);
-        inquiry.setCustomerName(viewerEmail); // we only have email at this stage
+        inquiry.setCustomerName(anonymizeName(viewerEmail));
         inquiry.setCustomerEmail(viewerEmail);
         inquiry.setReviewToken(reviewToken);
         inquiry.setTokenUsed(false);
@@ -164,5 +164,30 @@ public class ContactService {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         return HexFormat.of().formatHex(bytes); // 64-char hex string
+    }
+
+    /**
+     * Derives an anonymized display name from an email address.
+     * e.g. "gayamvenkata123@gmail.com" → "Gayamvenkata V."
+     *      "john.doe@example.com"     → "John D."
+     */
+    private String anonymizeName(String email) {
+        if (email == null || !email.contains("@")) return "Verified Client";
+        String localPart = email.split("@")[0]; // e.g. "gayamvenkata123" or "john.doe"
+        // Split on dots, dashes, underscores, digits
+        String[] parts = localPart.split("[.\\-_0-9]+");
+        if (parts.length == 0 || parts[0].isBlank()) return "Verified Client";
+
+        String firstName = capitalize(parts[0]);
+        if (parts.length >= 2 && !parts[1].isBlank()) {
+            return firstName + " " + Character.toUpperCase(parts[1].charAt(0)) + ".";
+        }
+        // Single word — just show first name
+        return firstName;
+    }
+
+    private String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1).toLowerCase();
     }
 }
