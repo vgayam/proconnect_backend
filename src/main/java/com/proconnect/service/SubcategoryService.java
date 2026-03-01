@@ -5,6 +5,8 @@ import com.proconnect.entity.Subcategory;
 import com.proconnect.repository.CategoryRepository;
 import com.proconnect.repository.SubcategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,12 +19,14 @@ public class SubcategoryService {
     private final SubcategoryRepository subcategoryRepository;
     private final CategoryRepository categoryRepository;
 
+    @Cacheable("skills")
     public List<SubcategoryDTO> getAllSubcategories() {
         return subcategoryRepository.findAllOrderByName().stream()
             .map(this::toDTO)
             .collect(Collectors.toList());
     }
 
+    @Cacheable("skillCategories")
     public List<String> getAllCategories() {
         return subcategoryRepository.findAllCategories();
     }
@@ -33,6 +37,7 @@ public class SubcategoryService {
             .collect(Collectors.toList());
     }
 
+    @CacheEvict(cacheNames = {"skills", "skillCategories"}, allEntries = true)
     public SubcategoryDTO createSubcategory(SubcategoryDTO dto) {
         Subcategory entity = new Subcategory();
         entity.setName(dto.getName());

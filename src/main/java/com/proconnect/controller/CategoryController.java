@@ -3,6 +3,7 @@ package com.proconnect.controller;
 import com.proconnect.entity.Category;
 import com.proconnect.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,7 @@ public class CategoryController {
 
     /** GET /api/categories — returns all active categories ordered by sort_order */
     @GetMapping
+    @Cacheable("categories")
     public ResponseEntity<List<CategoryResponse>> getAllCategories() {
         List<CategoryResponse> categories = categoryRepository
             .findByIsActiveTrueOrderBySortOrder()
@@ -30,6 +32,7 @@ public class CategoryController {
 
     /** GET /api/categories/names — returns just the name strings (used by search facets) */
     @GetMapping("/names")
+    @Cacheable("categoryNames")
     public ResponseEntity<List<String>> getCategoryNames() {
         List<String> names = categoryRepository
             .findByIsActiveTrueOrderBySortOrder()
