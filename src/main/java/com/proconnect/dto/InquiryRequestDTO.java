@@ -17,6 +17,10 @@ public class InquiryRequestDTO {
     private String phone;
     private String address;
 
+    /** Customer's GPS coordinates at time of booking */
+    private Double customerLat;
+    private Double customerLng;
+
     /** Preferred 1-hour slot — e.g. "2026-03-10" and "14:00" */
     private String preferredDate;
     private String preferredTime;

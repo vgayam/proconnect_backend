@@ -13,6 +13,8 @@ public class BookingDTO {
     private String customerEmail;
     private String customerPhone;
     private String customerAddress;
+    private Double customerLat;
+    private Double customerLng;
     private String preferredDate;
     private String preferredTime;
     private String note;
@@ -26,6 +28,8 @@ public class BookingDTO {
         dto.customerEmail = b.getCustomerEmail();
         dto.customerPhone   = b.getCustomerPhone();
         dto.customerAddress = b.getCustomerAddress();
+        dto.customerLat     = b.getCustomerLat();
+        dto.customerLng     = b.getCustomerLng();
         dto.preferredDate   = b.getPreferredDate();
         dto.preferredTime = b.getPreferredTime();
         dto.note          = b.getNote();

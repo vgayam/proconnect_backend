@@ -48,6 +48,8 @@ public class InquiryService {
         inquiry.setCustomerEmail(dto.getEmail());
         inquiry.setCustomerPhone(dto.getPhone());
         inquiry.setCustomerAddress(dto.getAddress());
+        inquiry.setCustomerLat(dto.getCustomerLat());
+        inquiry.setCustomerLng(dto.getCustomerLng());
         inquiry.setPreferredDate(dto.getPreferredDate());
         inquiry.setPreferredTime(dto.getPreferredTime());
         inquiry.setNote(dto.getNote());

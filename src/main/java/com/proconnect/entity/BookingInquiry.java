@@ -42,6 +42,12 @@ public class BookingInquiry {
     @Column(name = "customer_address", length = 500)
     private String customerAddress;
 
+    @Column(name = "customer_lat")
+    private Double customerLat;
+
+    @Column(name = "customer_lng")
+    private Double customerLng;
+
     @Column(name = "note", length = 1000)
     private String note;
 

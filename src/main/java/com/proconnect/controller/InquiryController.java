@@ -78,6 +78,11 @@ public class InquiryController {
         dto.setPreferredDate((String) body.get("preferredDate"));
         dto.setPreferredTime((String) body.get("preferredTime"));
         dto.setNote((String) body.get("note"));
+        // Geo coords — sent as Double/Number from the frontend
+        Object rawLat = body.get("customerLat");
+        Object rawLng = body.get("customerLng");
+        if (rawLat instanceof Number) dto.setCustomerLat(((Number) rawLat).doubleValue());
+        if (rawLng instanceof Number) dto.setCustomerLng(((Number) rawLng).doubleValue());
 
         log.info("POST /api/inquiries/professionals/{}/verify-and-book — email={}", professionalId, email);
         InquiryResponseDTO response = inquiryService.createInquiry(professionalId, dto);

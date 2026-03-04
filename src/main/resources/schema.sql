@@ -232,6 +232,8 @@ CREATE INDEX IF NOT EXISTS idx_contact_views_ip_date       ON contact_views (vie
 ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'PENDING' ^^
 ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'BOOKING' ^^
 ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS customer_address VARCHAR(500) ^^
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS customer_lat DOUBLE PRECISION ^^
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS customer_lng DOUBLE PRECISION ^^
 
 -- ============================================================
 -- FTS TRIGGER  (CREATE OR REPLACE — always idempotent)
