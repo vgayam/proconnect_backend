@@ -4,14 +4,17 @@ import com.proconnect.dto.BookingDTO;
 import com.proconnect.dto.InquiryRequestDTO;
 import com.proconnect.dto.InquiryResponseDTO;
 import com.proconnect.repository.BookingInquiryRepository;
+import com.proconnect.service.BookingEventService;
 import com.proconnect.service.EmailOtpService;
 import com.proconnect.service.InquiryService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +28,7 @@ public class InquiryController {
     private final InquiryService inquiryService;
     private final BookingInquiryRepository bookingInquiryRepository;
     private final EmailOtpService emailOtpService;
+    private final BookingEventService bookingEventService;
 
     /**
      * Step 0: Send OTP to the booker's email before submitting the booking.
@@ -120,5 +124,16 @@ public class InquiryController {
                     return ResponseEntity.ok(BookingDTO.from(b));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * SSE stream — GET /api/inquiries/professionals/{id}/stream
+     * The professional dashboard subscribes here to receive real-time booking push events.
+     * JWT is passed as a query param (?token=...) because EventSource cannot set headers.
+     */
+    @GetMapping(value = "/professionals/{professionalId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamBookings(@PathVariable Long professionalId) {
+        log.info("SSE subscribe — professional {}", professionalId);
+        return bookingEventService.subscribe(professionalId);
     }
 }

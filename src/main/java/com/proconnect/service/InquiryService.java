@@ -1,5 +1,6 @@
 package com.proconnect.service;
 
+import com.proconnect.dto.BookingDTO;
 import com.proconnect.dto.InquiryRequestDTO;
 import com.proconnect.dto.InquiryResponseDTO;
 import com.proconnect.entity.BookingInquiry;
@@ -24,6 +25,7 @@ public class InquiryService {
     private final BookingInquiryRepository bookingInquiryRepository;
     private final ProfessionalRepository professionalRepository;
     private final EmailOtpService emailOtpService;
+    private final BookingEventService bookingEventService;
 
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
@@ -53,6 +55,9 @@ public class InquiryService {
         inquiry.setTokenExpiresAt(LocalDateTime.now().plusDays(30));
 
         bookingInquiryRepository.save(inquiry);
+
+        // ── Push real-time SSE event to professional's dashboard ───────────
+        bookingEventService.pushNewBooking(professionalId, BookingDTO.from(inquiry));
 
         String professionalName = professional.getDisplayName() != null
             ? professional.getDisplayName()
