@@ -71,6 +71,13 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
           AND (:area             IS NULL OR :area    = '' OR similarity(:area, LOWER(psa.area_name)) > 0.2)
           AND (:subcategoryNames IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
         GROUP BY p.id
+        HAVING (
+          :lat IS NULL OR :lng IS NULL
+          OR (p.latitude IS NOT NULL AND p.longitude IS NOT NULL
+              AND (6371 * acos(LEAST(1.0, cos(radians(CAST(:lat AS FLOAT8))) * cos(radians(CAST(p.latitude AS FLOAT8)))
+                   * cos(radians(CAST(p.longitude AS FLOAT8)) - radians(CAST(:lng AS FLOAT8)))
+                   + sin(radians(CAST(:lat AS FLOAT8))) * sin(radians(CAST(p.latitude AS FLOAT8)))))) < CAST(:radiusKm AS FLOAT8))
+        )
         ORDER BY
           MAX(COALESCE(ts_rank(p.search_vector, plainto_tsquery('english', COALESCE(:query,''))), 0.0) +
               similarity(COALESCE(:query,''), p.headline) * 0.5) DESC,
@@ -87,35 +94,48 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         @Param("category")          String  category,
         @Param("area")              String  area,
         @Param("subcategoryNames")  String  subcategoryNames,
+        @Param("lat")               Double  lat,
+        @Param("lng")               Double  lng,
+        @Param("radiusKm")          double  radiusKm,
         @Param("pageSize")          int     pageSize,
         @Param("offset")            int     offset
     );
 
     @Query(nativeQuery = true, value = """
-        SELECT COUNT(DISTINCT p.id)
-        FROM professionals p
-        LEFT JOIN categories cat                 ON cat.id = p.category_id
-        LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
-        LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
-        LEFT JOIN professional_service_areas psa ON psa.professional_id = p.id
-        WHERE 1=1
-          AND (
-              :query IS NULL OR :query = ''
-              OR p.search_vector @@ plainto_tsquery('english', :query)
-              OR p.search_vector @@ to_tsquery('english', regexp_replace(trim(:query), '\\s+', ':* & ', 'g') || ':*')
-              OR similarity(:query, p.headline)            > 0.25
-              OR similarity(:query, coalesce(cat.name,'')) > 0.25
-              OR similarity(:query, coalesce(p.bio,''))    > 0.2
-              OR similarity(:query, coalesce(sc.name,''))  > 0.25
+        SELECT COUNT(*) FROM (
+          SELECT p.id
+          FROM professionals p
+          LEFT JOIN categories cat                 ON cat.id = p.category_id
+          LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
+          LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
+          LEFT JOIN professional_service_areas psa ON psa.professional_id = p.id
+          WHERE 1=1
+            AND (
+                :query IS NULL OR :query = ''
+                OR p.search_vector @@ plainto_tsquery('english', :query)
+                OR p.search_vector @@ to_tsquery('english', regexp_replace(trim(:query), '\\s+', ':* & ', 'g') || ':*')
+                OR similarity(:query, p.headline)            > 0.25
+                OR similarity(:query, coalesce(cat.name,'')) > 0.25
+                OR similarity(:query, coalesce(p.bio,''))    > 0.2
+                OR similarity(:query, coalesce(sc.name,''))  > 0.25
+            )
+            AND (:city              IS NULL OR :city     = '' OR similarity(:city,  p.city)   > 0.3)
+            AND (:state             IS NULL OR :state    = '' OR LOWER(p.state)    = LOWER(:state))
+            AND (:country           IS NULL OR :country  = '' OR LOWER(p.country)  = LOWER(:country))
+            AND (:remote            IS NULL OR p.remote            = :remote)
+            AND (:available         IS NULL OR p.is_available      = :available)
+            AND (:category          IS NULL OR :category = '' OR LOWER(cat.name)   = LOWER(:category))
+            AND (:area              IS NULL OR :area     = '' OR similarity(:area, LOWER(psa.area_name)) > 0.2)
+            AND (:subcategoryNames  IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
+          GROUP BY p.id
+          HAVING (
+            :lat IS NULL OR :lng IS NULL
+            OR (p.latitude IS NOT NULL AND p.longitude IS NOT NULL
+                AND (6371 * acos(LEAST(1.0, cos(radians(CAST(:lat AS FLOAT8))) * cos(radians(CAST(p.latitude AS FLOAT8)))
+                     * cos(radians(CAST(p.longitude AS FLOAT8)) - radians(CAST(:lng AS FLOAT8)))
+                     + sin(radians(CAST(:lat AS FLOAT8))) * sin(radians(CAST(p.latitude AS FLOAT8)))))) < CAST(:radiusKm AS FLOAT8))
           )
-          AND (:city              IS NULL OR :city     = '' OR similarity(:city,  p.city)   > 0.3)
-          AND (:state             IS NULL OR :state    = '' OR LOWER(p.state)    = LOWER(:state))
-          AND (:country           IS NULL OR :country  = '' OR LOWER(p.country)  = LOWER(:country))
-          AND (:remote            IS NULL OR p.remote            = :remote)
-          AND (:available         IS NULL OR p.is_available      = :available)
-          AND (:category          IS NULL OR :category = '' OR LOWER(cat.name)   = LOWER(:category))
-          AND (:area              IS NULL OR :area     = '' OR similarity(:area, LOWER(psa.area_name)) > 0.2)
-          AND (:subcategoryNames  IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
+        ) sub
         """)
     long countSearchProfessionals(
         @Param("query")             String  query,
@@ -126,7 +146,10 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         @Param("available")         Boolean available,
         @Param("category")          String  category,
         @Param("area")              String  area,
-        @Param("subcategoryNames")  String  subcategoryNames
+        @Param("subcategoryNames")  String  subcategoryNames,
+        @Param("lat")               Double  lat,
+        @Param("lng")               Double  lng,
+        @Param("radiusKm")          double  radiusKm
     );
 
     // ─────────────────────────────────────────────────────────────────────────

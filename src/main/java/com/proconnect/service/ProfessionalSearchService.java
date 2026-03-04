@@ -42,45 +42,16 @@ public class ProfessionalSearchService {
                 .collect(Collectors.joining(",")) + "}";
         }
 
-        // ── Geo / radius path ──────────────────────────────────────────────
-        if (criteria.hasGeoFilter()) {
-            double lat      = criteria.getLat();
-            double lng      = criteria.getLng();
-            double radiusKm = criteria.getRadiusKm();
-            String category = criteria.hasCategoriesFilter() ? criteria.getCategories().get(0) : null;
-
-            log.info("Geo search — lat={}, lng={}, radiusKm={}, category={}", lat, lng, radiusKm, category);
-
-            List<Professional> results = professionalRepository.searchByRadius(
-                lat, lng, radiusKm, criteria.getAvailable(), category, subcategoryNames, pageSize, offset);
-            long total = professionalRepository.countByRadius(
-                lat, lng, radiusKm, criteria.getAvailable(), category, subcategoryNames);
-
-            List<ProfessionalDTO> dtos = results.stream()
-                .map(professionalMapper::toDTO)
-                .collect(Collectors.toList());
-
-            return SearchResultDTO.builder()
-                .results(dtos)
-                .page(page)
-                .pageSize(pageSize)
-                .total(total)
-                .totalPages((int) Math.ceil((double) total / pageSize))
-                .query(criteria.getQuery())
-                .location(null)
-                .categoryFacets(buildFacets(professionalRepository.facetsByCategory()))
-                .cityFacets(buildFacets(professionalRepository.facetsByCity()))
-                .areaFacets(buildFacets(professionalRepository.facetsByServiceArea()))
-                .build();
-        }
-
-        // ── Standard text / city / area path ──────────────────────────────
+        // ── Standard text / city / area path (lat/lng applied as additive HAVING filter) ──
         String query    = blankNull(criteria.getQuery());
         String city     = blankNull(criteria.getCity());
         String state    = blankNull(criteria.getState());
         String country  = blankNull(criteria.getCountry());
         String category = criteria.hasCategoriesFilter() ? criteria.getCategories().get(0) : null;
         String area     = blankNull(criteria.getArea());
+        Double lat      = criteria.hasGeoFilter() ? criteria.getLat()     : null;
+        Double lng      = criteria.hasGeoFilter() ? criteria.getLng()     : null;
+        double radiusKm = criteria.getRadiusKm();
 
         // ── Parse "plumber in indiranagar" style free-text queries ───────────
         if (query != null && area == null) {
@@ -101,11 +72,11 @@ public class ProfessionalSearchService {
 
         List<Professional> results = professionalRepository.searchProfessionals(
             query, city, state, country, criteria.getRemote(), criteria.getAvailable(),
-            category, area, subcategoryNames, pageSize, offset);
+            category, area, subcategoryNames, lat, lng, radiusKm, pageSize, offset);
 
         long total = professionalRepository.countSearchProfessionals(
             query, city, state, country, criteria.getRemote(), criteria.getAvailable(),
-            category, area, subcategoryNames);
+            category, area, subcategoryNames, lat, lng, radiusKm);
 
         List<ProfessionalDTO> dtos = results.stream()
             .map(professionalMapper::toDTO)
