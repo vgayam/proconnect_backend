@@ -28,6 +28,18 @@ public class ProfessionalSearchCriteria {
     @Builder.Default private int page = 0;
     @Builder.Default private int pageSize = 10;
 
+    // ── Geo / radius search ──────────────────────────────────────────────────
+    /** Customer/searcher latitude — enables radius search when combined with lng */
+    private Double lat;
+    /** Customer/searcher longitude */
+    private Double lng;
+    /** Search radius in kilometres — defaults to 50 km when lat/lng provided */
+    @Builder.Default private double radiusKm = 50.0;
+
+    public boolean hasGeoFilter() {
+        return lat != null && lng != null;
+    }
+
     public boolean hasAnyFilter() {
         return query != null || city != null || state != null || country != null ||
                remote != null || available != null || area != null ||

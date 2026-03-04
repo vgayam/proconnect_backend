@@ -34,6 +34,47 @@ public class ProfessionalSearchService {
         int pageSize = criteria.getPageSize() > 0 ? criteria.getPageSize() : 10;
         int offset   = page * pageSize;
 
+        // ── Subcategory names → pg array literal  e.g. '{plumbing,tiling}' ──
+        String subcategoryNames = null;
+        if (criteria.hasSubcategoriesFilter()) {
+            subcategoryNames = "{" + criteria.effectiveSubcategories().stream()
+                .map(n -> n.replace("'", "''").toLowerCase())
+                .collect(Collectors.joining(",")) + "}";
+        }
+
+        // ── Geo / radius path ──────────────────────────────────────────────
+        if (criteria.hasGeoFilter()) {
+            double lat      = criteria.getLat();
+            double lng      = criteria.getLng();
+            double radiusKm = criteria.getRadiusKm();
+            String category = criteria.hasCategoriesFilter() ? criteria.getCategories().get(0) : null;
+
+            log.info("Geo search — lat={}, lng={}, radiusKm={}, category={}", lat, lng, radiusKm, category);
+
+            List<Professional> results = professionalRepository.searchByRadius(
+                lat, lng, radiusKm, criteria.getAvailable(), category, subcategoryNames, pageSize, offset);
+            long total = professionalRepository.countByRadius(
+                lat, lng, radiusKm, criteria.getAvailable(), category, subcategoryNames);
+
+            List<ProfessionalDTO> dtos = results.stream()
+                .map(professionalMapper::toDTO)
+                .collect(Collectors.toList());
+
+            return SearchResultDTO.builder()
+                .results(dtos)
+                .page(page)
+                .pageSize(pageSize)
+                .total(total)
+                .totalPages((int) Math.ceil((double) total / pageSize))
+                .query(criteria.getQuery())
+                .location(null)
+                .categoryFacets(buildFacets(professionalRepository.facetsByCategory()))
+                .cityFacets(buildFacets(professionalRepository.facetsByCity()))
+                .areaFacets(buildFacets(professionalRepository.facetsByServiceArea()))
+                .build();
+        }
+
+        // ── Standard text / city / area path ──────────────────────────────
         String query    = blankNull(criteria.getQuery());
         String city     = blankNull(criteria.getCity());
         String state    = blankNull(criteria.getState());
@@ -56,14 +97,6 @@ public class ProfessionalSearchService {
                 }
                 query = keyword; // always strip the "in X" part from keyword search
             }
-        }
-
-        // ── Subcategory names → pg array literal  e.g. '{plumbing,tiling}' ──
-        String subcategoryNames = null;
-        if (criteria.hasSubcategoriesFilter()) {
-            subcategoryNames = "{" + criteria.effectiveSubcategories().stream()
-                .map(n -> n.replace("'", "''").toLowerCase())
-                .collect(Collectors.joining(",")) + "}";
         }
 
         List<Professional> results = professionalRepository.searchProfessionals(

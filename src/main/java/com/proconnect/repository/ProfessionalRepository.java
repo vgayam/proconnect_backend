@@ -171,4 +171,74 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         LIMIT 1
         """)
     List<String> findMatchingAreaName(@Param("hint") String hint);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Radius / geo search  (Haversine — no PostGIS required)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns professionals within :radiusKm of (:lat, :lng), ordered by distance.
+     * Only professionals with latitude/longitude set are considered.
+     */
+    @Query(nativeQuery = true, value = """
+        SELECT p.*,
+               (6371 * acos(
+                   LEAST(1.0, cos(radians(:lat)) * cos(radians(p.latitude))
+                   * cos(radians(p.longitude) - radians(:lng))
+                   + sin(radians(:lat)) * sin(radians(p.latitude)))
+               )) AS distance_km
+        FROM professionals p
+        LEFT JOIN categories cat ON cat.id = p.category_id
+        LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
+        LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
+        WHERE p.latitude  IS NOT NULL
+          AND p.longitude IS NOT NULL
+          AND (:available IS NULL OR p.is_available = :available)
+          AND (:category  IS NULL OR :category = '' OR LOWER(cat.name) = LOWER(:category))
+          AND (:subcategoryNames IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
+        GROUP BY p.id
+        HAVING (6371 * acos(
+                   LEAST(1.0, cos(radians(:lat)) * cos(radians(p.latitude))
+                   * cos(radians(p.longitude) - radians(:lng))
+                   + sin(radians(:lat)) * sin(radians(p.latitude)))
+               )) < :radiusKm
+        ORDER BY distance_km ASC
+        LIMIT :pageSize OFFSET :offset
+        """)
+    List<Professional> searchByRadius(
+        @Param("lat")              double  lat,
+        @Param("lng")              double  lng,
+        @Param("radiusKm")         double  radiusKm,
+        @Param("available")        Boolean available,
+        @Param("category")         String  category,
+        @Param("subcategoryNames") String  subcategoryNames,
+        @Param("pageSize")         int     pageSize,
+        @Param("offset")           int     offset
+    );
+
+    @Query(nativeQuery = true, value = """
+        SELECT COUNT(DISTINCT p.id)
+        FROM professionals p
+        LEFT JOIN categories cat ON cat.id = p.category_id
+        LEFT JOIN professional_subcategories ps ON ps.professional_id = p.id
+        LEFT JOIN subcategories sc               ON sc.id = ps.subcategory_id
+        WHERE p.latitude  IS NOT NULL
+          AND p.longitude IS NOT NULL
+          AND (:available IS NULL OR p.is_available = :available)
+          AND (:category  IS NULL OR :category = '' OR LOWER(cat.name) = LOWER(:category))
+          AND (:subcategoryNames IS NULL OR LOWER(sc.name) = ANY(LOWER(CAST(:subcategoryNames AS TEXT))\\:\\:TEXT[]))
+          AND (6371 * acos(
+                   LEAST(1.0, cos(radians(:lat)) * cos(radians(p.latitude))
+                   * cos(radians(p.longitude) - radians(:lng))
+                   + sin(radians(:lat)) * sin(radians(p.latitude)))
+               )) < :radiusKm
+        """)
+    long countByRadius(
+        @Param("lat")              double  lat,
+        @Param("lng")              double  lng,
+        @Param("radiusKm")         double  radiusKm,
+        @Param("available")        Boolean available,
+        @Param("category")         String  category,
+        @Param("subcategoryNames") String  subcategoryNames
+    );
 }

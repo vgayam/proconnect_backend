@@ -47,11 +47,14 @@ public class ProfessionalController {
         @RequestParam(required = false)                     List<String> categories,  // multi-value
         @RequestParam(required = false)                     String       category,    // single-value alias
         @RequestParam(required = false)                     String       area,        // neighbourhood / locality
+        @RequestParam(required = false)                     Double       lat,         // geo: searcher latitude
+        @RequestParam(required = false)                     Double       lng,         // geo: searcher longitude
+        @RequestParam(required = false, defaultValue = "50") double      radius,      // geo: radius in km
         @RequestParam(defaultValue = "0")                   int          page,
         @RequestParam(defaultValue = "10")                  int          pageSize
     ) {
-        log.info("GET /api/professionals — q={}, city={}, location={}, state={}, country={}, remote={}, available={}, subcategories={}, skills={}, categories={}, category={}, area={}, page={}, pageSize={}",
-            q, city, location, state, country, remote, available, subcategories, skills, categories, category, area, page, pageSize);
+        log.info("GET /api/professionals — q={}, city={}, location={}, state={}, country={}, remote={}, available={}, subcategories={}, skills={}, categories={}, category={}, area={}, lat={}, lng={}, radius={}, page={}, pageSize={}",
+            q, city, location, state, country, remote, available, subcategories, skills, categories, category, area, lat, lng, radius, page, pageSize);
 
         // Normalise aliases: ?location= → city, ?category= → categories list
         String effectiveCity = (city != null && !city.isBlank()) ? city
@@ -71,6 +74,9 @@ public class ProfessionalController {
             .skills(skills)
             .categories(effectiveCategories)
             .area(area)
+            .lat(lat)
+            .lng(lng)
+            .radiusKm(radius)
             .page(page)
             .pageSize(pageSize)
             .build();
