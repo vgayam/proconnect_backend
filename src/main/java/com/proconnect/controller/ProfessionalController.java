@@ -166,6 +166,25 @@ public class ProfessionalController {
     }
 
     /**
+     * PATCH /api/professionals/me/location — update the professional's lat/lng.
+     * Called periodically from the dashboard while the professional is logged in.
+     */
+    @PatchMapping("/me/location")
+    public ResponseEntity<?> updateLocation(
+            @AuthenticationPrincipal Long professionalId,
+            @RequestBody Map<String, Double> body) {
+        Double lat = body.get("lat");
+        Double lng = body.get("lng");
+        if (lat == null || lng == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "lat and lng are required"));
+        }
+        log.info("PATCH /api/professionals/me/location — professionalId={}, lat={}, lng={}", professionalId, lat, lng);
+        professionalService.updateLocation(professionalId,
+            java.math.BigDecimal.valueOf(lat), java.math.BigDecimal.valueOf(lng));
+        return ResponseEntity.ok(Map.of("lat", lat, "lng", lng));
+    }
+
+    /**
      * GET /api/professionals/me/stats — dashboard stats for the logged-in professional.
      * Returns contact reveals and unique lead emails for this week and all-time.
      */

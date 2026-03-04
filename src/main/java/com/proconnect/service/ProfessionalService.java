@@ -108,4 +108,14 @@ public class ProfessionalService {
         professionalRepository.save(professional);
         return isAvailable;
     }
+
+    /** Update the lat/lng for the currently authenticated professional. */
+    @Transactional
+    public void updateLocation(Long professionalId, java.math.BigDecimal lat, java.math.BigDecimal lng) {
+        Professional professional = professionalRepository.findById(professionalId)
+                .orElseThrow(() -> ResourceNotFoundException.professionalNotFound(professionalId));
+        professional.setLatitude(lat);
+        professional.setLongitude(lng);
+        professionalRepository.save(professional);
+    }
 }
