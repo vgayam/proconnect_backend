@@ -33,8 +33,8 @@ public class ProfessionalSearchCriteria {
     private Double lat;
     /** Customer/searcher longitude */
     private Double lng;
-    /** Search radius in kilometres — defaults to 50 km when lat/lng provided */
-    @Builder.Default private double radiusKm = 50.0;
+    /** Search radius in kilometres — defaults to 3 km when lat/lng provided */
+    @Builder.Default private double radiusKm = 3.0;
 
     public boolean hasGeoFilter() {
         return lat != null && lng != null;

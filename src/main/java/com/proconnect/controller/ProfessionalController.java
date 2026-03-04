@@ -49,7 +49,7 @@ public class ProfessionalController {
         @RequestParam(required = false)                     String       area,        // neighbourhood / locality
         @RequestParam(required = false)                     Double       lat,         // geo: searcher latitude
         @RequestParam(required = false)                     Double       lng,         // geo: searcher longitude
-        @RequestParam(required = false, defaultValue = "50") double      radius,      // geo: radius in km
+        @RequestParam(required = false, defaultValue = "3") double       radius,      // geo: radius in km
         @RequestParam(defaultValue = "0")                   int          page,
         @RequestParam(defaultValue = "10")                  int          pageSize
     ) {
