@@ -101,4 +101,24 @@ public class InquiryController {
                 .toList();
         return ResponseEntity.ok(inquiries);
     }
+
+    /** Accept or reject a booking — PATCH /api/inquiries/{id}/status  body: {"status":"ACCEPTED"|"REJECTED"} */
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String status = body.get("status");
+        if (status == null || (!status.equals("ACCEPTED") && !status.equals("REJECTED"))) {
+            return ResponseEntity.badRequest().body(Map.of("message", "status must be ACCEPTED or REJECTED"));
+        }
+        return bookingInquiryRepository.findById(id)
+                .map(b -> {
+                    b.setStatus(status);
+                    bookingInquiryRepository.save(b);
+                    log.info("Booking {} marked as {}", id, status);
+                    return ResponseEntity.ok(BookingDTO.from(b));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

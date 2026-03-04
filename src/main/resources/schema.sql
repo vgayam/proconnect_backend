@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS booking_inquiries (
     preferred_date   VARCHAR(20),
     preferred_time   VARCHAR(10),
     note             VARCHAR(1000),
+    status           VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
     review_token     VARCHAR(64)  NOT NULL UNIQUE,
     token_used       BOOLEAN      NOT NULL DEFAULT FALSE,
     token_expires_at TIMESTAMP    NOT NULL,
@@ -222,6 +223,11 @@ CREATE INDEX IF NOT EXISTS idx_reviews_professional        ON reviews(profession
 CREATE INDEX IF NOT EXISTS idx_email_otps_email            ON email_otps(email) ^^
 CREATE INDEX IF NOT EXISTS idx_contact_views_email_date    ON contact_views (viewer_email, viewed_at) ^^
 CREATE INDEX IF NOT EXISTS idx_contact_views_ip_date       ON contact_views (viewer_ip,    viewed_at) ^^
+
+-- ============================================================
+-- MIGRATIONS  (ADD COLUMN IF NOT EXISTS — idempotent)
+-- ============================================================
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'PENDING' ^^
 
 -- ============================================================
 -- FTS TRIGGER  (CREATE OR REPLACE — always idempotent)

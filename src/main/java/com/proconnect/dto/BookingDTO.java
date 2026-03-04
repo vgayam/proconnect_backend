@@ -15,6 +15,7 @@ public class BookingDTO {
     private String preferredDate;
     private String preferredTime;
     private String note;
+    private String status;
     private LocalDateTime createdAt;
 
     public static BookingDTO from(BookingInquiry b) {
@@ -26,6 +27,7 @@ public class BookingDTO {
         dto.preferredDate = b.getPreferredDate();
         dto.preferredTime = b.getPreferredTime();
         dto.note          = b.getNote();
+        dto.status        = b.getStatus();
         dto.createdAt     = b.getCreatedAt();
         return dto;
     }

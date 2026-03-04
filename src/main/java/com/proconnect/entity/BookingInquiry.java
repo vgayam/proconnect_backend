@@ -42,6 +42,10 @@ public class BookingInquiry {
     @Column(name = "note", length = 1000)
     private String note;
 
+    /** PENDING | ACCEPTED | REJECTED */
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = "PENDING";
+
     @Column(name = "review_token", nullable = false, unique = true, length = 64)
     private String reviewToken;
 
