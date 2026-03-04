@@ -108,6 +108,7 @@ public class ContactService {
         inquiry.setProfessional(professional);
         inquiry.setCustomerName(anonymizeName(viewerEmail));
         inquiry.setCustomerEmail(viewerEmail);
+        inquiry.setSource("CONTACT_REVEAL");
         inquiry.setReviewToken(reviewToken);
         inquiry.setTokenUsed(false);
         inquiry.setTokenExpiresAt(LocalDateTime.now().plusDays(REVIEW_TOKEN_EXPIRY_DAYS));

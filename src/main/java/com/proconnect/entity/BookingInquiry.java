@@ -46,6 +46,10 @@ public class BookingInquiry {
     @Column(name = "status", nullable = false, length = 20)
     private String status = "PENDING";
 
+    /** BOOKING | CONTACT_REVEAL — distinguishes actual bookings from contact-reveal review tokens */
+    @Column(name = "source", nullable = false, length = 20)
+    private String source = "BOOKING";
+
     @Column(name = "review_token", nullable = false, unique = true, length = 64)
     private String reviewToken;
 

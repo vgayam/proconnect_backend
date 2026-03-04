@@ -14,7 +14,7 @@ public interface BookingInquiryRepository extends JpaRepository<BookingInquiry, 
 
     Optional<BookingInquiry> findByReviewToken(String token);
 
-    /** Use DISTINCT to avoid duplicate rows caused by the Professional's @ManyToMany subcategories JOIN. */
-    @Query("SELECT DISTINCT b FROM BookingInquiry b WHERE b.professional.id = :professionalId ORDER BY b.createdAt DESC")
+    /** Only return actual bookings — exclude CONTACT_REVEAL entries created by the contact-reveal flow. */
+    @Query("SELECT DISTINCT b FROM BookingInquiry b WHERE b.professional.id = :professionalId AND b.source = 'BOOKING' ORDER BY b.createdAt DESC")
     List<BookingInquiry> findByProfessionalId(@Param("professionalId") Long professionalId);
 }
