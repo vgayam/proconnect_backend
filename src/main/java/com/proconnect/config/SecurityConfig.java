@@ -29,6 +29,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/request-otp", "/api/auth/verify-otp", "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/contact/professionals/*/request-otp").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/contact/professionals/*/verify-otp").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/inquiries/professionals/*/request-otp").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/inquiries/professionals/*/verify-and-book").permitAll()
                 .requestMatchers(HttpMethod.GET,  "/api/professionals/**").permitAll()
                 .requestMatchers(HttpMethod.GET,  "/api/categories/**").permitAll()
                 .requestMatchers(HttpMethod.GET,  "/api/subcategories/**").permitAll()
