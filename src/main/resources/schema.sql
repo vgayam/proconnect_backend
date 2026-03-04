@@ -168,11 +168,6 @@ CREATE TABLE IF NOT EXISTS booking_inquiries (
     FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE CASCADE
 ) ^^
 
--- Add booking slot columns if upgrading an existing DB
-ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS preferred_date VARCHAR(20) ^^
-ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS preferred_time VARCHAR(10) ^^
-ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS note           VARCHAR(1000) ^^
-
 -- ============================================================
 -- REVIEWS
 -- ============================================================
