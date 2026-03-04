@@ -1,8 +1,8 @@
 package com.proconnect.controller;
 
+import com.proconnect.dto.BookingDTO;
 import com.proconnect.dto.InquiryRequestDTO;
 import com.proconnect.dto.InquiryResponseDTO;
-import com.proconnect.entity.BookingInquiry;
 import com.proconnect.repository.BookingInquiryRepository;
 import com.proconnect.service.EmailOtpService;
 import com.proconnect.service.InquiryService;
@@ -92,9 +92,13 @@ public class InquiryController {
 
     /** Returns all booking inquiries for a professional (used by the dashboard). */
     @GetMapping("/professionals/{professionalId}")
-    public ResponseEntity<List<BookingInquiry>> getInquiries(@PathVariable Long professionalId) {
+    public ResponseEntity<List<BookingDTO>> getInquiries(@PathVariable Long professionalId) {
         log.info("GET /api/inquiries/professionals/{}", professionalId);
-        List<BookingInquiry> inquiries = bookingInquiryRepository.findByProfessionalId(professionalId);
+        List<BookingDTO> inquiries = bookingInquiryRepository
+                .findByProfessionalId(professionalId)
+                .stream()
+                .map(BookingDTO::from)
+                .toList();
         return ResponseEntity.ok(inquiries);
     }
 }
