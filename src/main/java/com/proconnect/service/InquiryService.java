@@ -47,6 +47,7 @@ public class InquiryService {
         inquiry.setCustomerName(dto.getName());
         inquiry.setCustomerEmail(dto.getEmail());
         inquiry.setCustomerPhone(dto.getPhone());
+        inquiry.setCustomerAddress(dto.getAddress());
         inquiry.setPreferredDate(dto.getPreferredDate());
         inquiry.setPreferredTime(dto.getPreferredTime());
         inquiry.setNote(dto.getNote());
@@ -77,7 +78,7 @@ public class InquiryService {
         if (professional.getEmail() != null && !professional.getEmail().isBlank()) {
             emailOtpService.sendBookingNotificationToProfessional(
                 professional.getEmail(), professionalName,
-                dto.getName(), dto.getEmail(), dto.getPhone(), slotLabel, dto.getNote());
+                dto.getName(), dto.getEmail(), dto.getPhone(), dto.getAddress(), slotLabel, dto.getNote());
         }
 
         log.info("Booking inquiry created — professional={}, customer={}, slot={}",

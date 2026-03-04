@@ -39,6 +39,9 @@ public class BookingInquiry {
     @Column(name = "preferred_time", length = 10)
     private String preferredTime;
 
+    @Column(name = "customer_address", length = 500)
+    private String customerAddress;
+
     @Column(name = "note", length = 1000)
     private String note;
 

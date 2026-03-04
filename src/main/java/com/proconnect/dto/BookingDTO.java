@@ -12,6 +12,7 @@ public class BookingDTO {
     private String customerName;
     private String customerEmail;
     private String customerPhone;
+    private String customerAddress;
     private String preferredDate;
     private String preferredTime;
     private String note;
@@ -23,8 +24,9 @@ public class BookingDTO {
         dto.id            = b.getId();
         dto.customerName  = b.getCustomerName();
         dto.customerEmail = b.getCustomerEmail();
-        dto.customerPhone = b.getCustomerPhone();
-        dto.preferredDate = b.getPreferredDate();
+        dto.customerPhone   = b.getCustomerPhone();
+        dto.customerAddress = b.getCustomerAddress();
+        dto.preferredDate   = b.getPreferredDate();
         dto.preferredTime = b.getPreferredTime();
         dto.note          = b.getNote();
         dto.status        = b.getStatus();

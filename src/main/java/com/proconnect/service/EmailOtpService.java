@@ -168,7 +168,8 @@ public class EmailOtpService {
 
     public void sendBookingNotificationToProfessional(String professionalEmail, String professionalName,
                                                        String clientName, String clientEmail,
-                                                       String clientPhone, String slotLabel, String note) {
+                                                       String clientPhone, String clientAddress,
+                                                       String slotLabel, String note) {
         if (devMode) {
             log.info("DEV MODE — booking notification to professional={}, from={}, slot={}",
                 professionalEmail, clientEmail, slotLabel);
@@ -184,20 +185,22 @@ public class EmailOtpService {
 
                 You have a new booking request on ProConnect!
 
-                Client      : %s
-                Email       : %s
-                Phone       : %s
-                Requested slot: %s
-                Note        : %s
+                Client   : %s
+                Email    : %s
+                Phone    : %s
+                Address  : %s
+                Slot     : %s
+                Note     : %s
 
-                Please reach out to the client to confirm the appointment.
+                Log in to your ProConnect dashboard to accept or reject this booking.
 
                 — The ProConnect Team
                 """.formatted(
                     professionalName,
                     clientName,
-                    clientEmail != null ? clientEmail : "—",
-                    clientPhone != null ? clientPhone : "—",
+                    clientEmail  != null ? clientEmail  : "—",
+                    clientPhone  != null ? clientPhone  : "—",
+                    clientAddress != null && !clientAddress.isBlank() ? clientAddress : "—",
                     slotLabel,
                     note != null && !note.isBlank() ? note : "—"
                 ));
@@ -205,6 +208,45 @@ public class EmailOtpService {
             log.info("Booking notification sent to professional {}", professionalEmail);
         } catch (Exception e) {
             log.warn("Failed to send booking notification to {}: {}", professionalEmail, e.getMessage());
+        }
+    }
+
+    public void sendBookingStatusEmail(String clientEmail, String clientName,
+                                        String professionalName, String slotLabel, String status) {
+        if (devMode) {
+            log.info("DEV MODE — booking status email to client={}, status={}", clientEmail, status);
+            return;
+        }
+        boolean accepted = "ACCEPTED".equals(status);
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(fromAddress);
+            msg.setTo(clientEmail);
+            msg.setSubject((accepted ? "✅ Booking confirmed" : "❌ Booking declined") + " — ProConnect");
+            msg.setText(accepted ? """
+                Hi %s,
+
+                Great news! %s has accepted your booking request.
+
+                Slot: %s
+
+                They will contact you shortly to confirm the final details.
+
+                — The ProConnect Team
+                """.formatted(clientName, professionalName, slotLabel)
+                : """
+                Hi %s,
+
+                Unfortunately, %s is unable to accept your booking for %s.
+
+                You can search for other professionals on ProConnect and book again.
+
+                — The ProConnect Team
+                """.formatted(clientName, professionalName, slotLabel));
+            mailSender.send(msg);
+            log.info("Booking status ({}) email sent to client {}", status, clientEmail);
+        } catch (Exception e) {
+            log.warn("Failed to send booking status email to {}: {}", clientEmail, e.getMessage());
         }
     }
 

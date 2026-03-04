@@ -121,6 +121,16 @@ public class InquiryController {
                     b.setStatus(status);
                     bookingInquiryRepository.save(b);
                     log.info("Booking {} marked as {}", id, status);
+                    // Notify the customer about the decision
+                    if (b.getCustomerEmail() != null && !b.getCustomerEmail().isBlank()) {
+                        String proName = b.getProfessional().getDisplayName() != null
+                                ? b.getProfessional().getDisplayName()
+                                : b.getProfessional().getFullName();
+                        String slot = (b.getPreferredDate() != null ? b.getPreferredDate() : "")
+                                + (b.getPreferredTime() != null ? " at " + b.getPreferredTime() : "");
+                        emailOtpService.sendBookingStatusEmail(
+                                b.getCustomerEmail(), b.getCustomerName(), proName, slot, status);
+                    }
                     return ResponseEntity.ok(BookingDTO.from(b));
                 })
                 .orElse(ResponseEntity.notFound().build());
