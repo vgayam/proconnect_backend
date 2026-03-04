@@ -158,12 +158,20 @@ CREATE TABLE IF NOT EXISTS booking_inquiries (
     customer_name    VARCHAR(200) NOT NULL,
     customer_email   VARCHAR(200),
     customer_phone   VARCHAR(30),
+    preferred_date   VARCHAR(20),
+    preferred_time   VARCHAR(10),
+    note             VARCHAR(1000),
     review_token     VARCHAR(64)  NOT NULL UNIQUE,
     token_used       BOOLEAN      NOT NULL DEFAULT FALSE,
     token_expires_at TIMESTAMP    NOT NULL,
     created_at       TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (professional_id) REFERENCES professionals(id) ON DELETE CASCADE
 ) ^^
+
+-- Add booking slot columns if upgrading an existing DB
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS preferred_date VARCHAR(20) ^^
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS preferred_time VARCHAR(10) ^^
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS note           VARCHAR(1000) ^^
 
 -- ============================================================
 -- REVIEWS

@@ -14,6 +14,11 @@ public class InquiryRequestDTO {
     private String name;
 
     private String email;
-
     private String phone;
+
+    /** Preferred 1-hour slot — e.g. "2026-03-10" and "14:00" */
+    private String preferredDate;
+    private String preferredTime;
+
+    private String note;
 }

@@ -32,6 +32,16 @@ public class BookingInquiry {
     @Column(name = "customer_phone")
     private String customerPhone;
 
+    /** Preferred 1-hour slot requested by the client */
+    @Column(name = "preferred_date")
+    private String preferredDate;
+
+    @Column(name = "preferred_time", length = 10)
+    private String preferredTime;
+
+    @Column(name = "note", length = 1000)
+    private String note;
+
     @Column(name = "review_token", nullable = false, unique = true, length = 64)
     private String reviewToken;
 

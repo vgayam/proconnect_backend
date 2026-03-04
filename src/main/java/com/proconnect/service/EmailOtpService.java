@@ -134,6 +134,80 @@ public class EmailOtpService {
         }
     }
 
+    public void sendBookingConfirmationToClient(String clientEmail, String clientName,
+                                                 String professionalName, String slotLabel) {
+        if (devMode) {
+            log.info("DEV MODE — booking confirmation to client={}, professional={}, slot={}",
+                clientEmail, professionalName, slotLabel);
+            return;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(fromAddress);
+            msg.setTo(clientEmail);
+            msg.setSubject("Booking request sent to " + professionalName + " — ProConnect");
+            msg.setText("""
+                Hi %s,
+
+                Your booking request has been sent successfully!
+
+                Professional : %s
+                Requested slot: %s
+
+                %s will review your request and reach out to confirm.
+                You'll hear from them shortly — keep an eye on your email and phone.
+
+                — The ProConnect Team
+                """.formatted(clientName, professionalName, slotLabel, professionalName));
+            mailSender.send(msg);
+            log.info("Booking confirmation sent to client {}", clientEmail);
+        } catch (Exception e) {
+            log.warn("Failed to send booking confirmation to {}: {}", clientEmail, e.getMessage());
+        }
+    }
+
+    public void sendBookingNotificationToProfessional(String professionalEmail, String professionalName,
+                                                       String clientName, String clientEmail,
+                                                       String clientPhone, String slotLabel, String note) {
+        if (devMode) {
+            log.info("DEV MODE — booking notification to professional={}, from={}, slot={}",
+                professionalEmail, clientEmail, slotLabel);
+            return;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(fromAddress);
+            msg.setTo(professionalEmail);
+            msg.setSubject("New booking request from " + clientName + " — ProConnect");
+            msg.setText("""
+                Hi %s,
+
+                You have a new booking request on ProConnect!
+
+                Client      : %s
+                Email       : %s
+                Phone       : %s
+                Requested slot: %s
+                Note        : %s
+
+                Please reach out to the client to confirm the appointment.
+
+                — The ProConnect Team
+                """.formatted(
+                    professionalName,
+                    clientName,
+                    clientEmail != null ? clientEmail : "—",
+                    clientPhone != null ? clientPhone : "—",
+                    slotLabel,
+                    note != null && !note.isBlank() ? note : "—"
+                ));
+            mailSender.send(msg);
+            log.info("Booking notification sent to professional {}", professionalEmail);
+        } catch (Exception e) {
+            log.warn("Failed to send booking notification to {}: {}", professionalEmail, e.getMessage());
+        }
+    }
+
     private void sendEmail(String toEmail, String code) {
         try {
             SimpleMailMessage msg = new SimpleMailMessage();

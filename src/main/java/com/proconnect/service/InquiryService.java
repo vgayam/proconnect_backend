@@ -9,6 +9,7 @@ import com.proconnect.repository.BookingInquiryRepository;
 import com.proconnect.repository.ProfessionalRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,10 @@ public class InquiryService {
 
     private final BookingInquiryRepository bookingInquiryRepository;
     private final ProfessionalRepository professionalRepository;
+    private final EmailOtpService emailOtpService;
+
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
 
     @Transactional
     public InquiryResponseDTO createInquiry(Long professionalId, InquiryRequestDTO dto) {
@@ -40,28 +45,44 @@ public class InquiryService {
         inquiry.setCustomerName(dto.getName());
         inquiry.setCustomerEmail(dto.getEmail());
         inquiry.setCustomerPhone(dto.getPhone());
+        inquiry.setPreferredDate(dto.getPreferredDate());
+        inquiry.setPreferredTime(dto.getPreferredTime());
+        inquiry.setNote(dto.getNote());
         inquiry.setReviewToken(token);
         inquiry.setTokenUsed(false);
-        inquiry.setTokenExpiresAt(LocalDateTime.now().plusHours(72));
+        inquiry.setTokenExpiresAt(LocalDateTime.now().plusDays(30));
 
         bookingInquiryRepository.save(inquiry);
-
-        // TODO: Send review link email when email is provided
-        String reviewLink = "/review/" + token;
-        log.info("Booking inquiry created for professional {}. Review link: {}", professionalId, reviewLink);
-        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
-            log.info("Would send review email to {} with link {}", dto.getEmail(), reviewLink);
-        }
 
         String professionalName = professional.getDisplayName() != null
             ? professional.getDisplayName()
             : professional.getFullName();
 
+        String slotLabel = (dto.getPreferredDate() != null && dto.getPreferredTime() != null)
+            ? dto.getPreferredDate() + " at " + dto.getPreferredTime()
+            : "a time to be confirmed";
+
+        // ── Notify the client ──────────────────────────────────────────────
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            emailOtpService.sendBookingConfirmationToClient(
+                dto.getEmail(), dto.getName(), professionalName, slotLabel);
+        }
+
+        // ── Notify the professional ────────────────────────────────────────
+        if (professional.getEmail() != null && !professional.getEmail().isBlank()) {
+            emailOtpService.sendBookingNotificationToProfessional(
+                professional.getEmail(), professionalName,
+                dto.getName(), dto.getEmail(), dto.getPhone(), slotLabel, dto.getNote());
+        }
+
+        log.info("Booking inquiry created — professional={}, customer={}, slot={}",
+            professionalId, dto.getEmail(), slotLabel);
+
         return new InquiryResponseDTO(
             inquiry.getId(),
             token,
             professionalName,
-            "Your inquiry has been recorded. You will receive the professional's contact details below."
+            "Your booking request has been sent. " + professionalName + " will confirm shortly."
         );
     }
 }
