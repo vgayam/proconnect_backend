@@ -49,10 +49,12 @@ CREATE TABLE IF NOT EXISTS professionals (
     hourly_rate_max DECIMAL(10,2),
     currency        VARCHAR(3)            DEFAULT 'USD',
     email           VARCHAR(100) UNIQUE,
-    phone           VARCHAR(30),
+    phone           VARCHAR(30)  UNIQUE,
     whatsapp        VARCHAR(30),
     category_id     BIGINT,
     search_vector   tsvector,
+    latitude        DECIMAL(9,6),
+    longitude       DECIMAL(9,6),
     created_at      TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
@@ -220,21 +222,6 @@ CREATE INDEX IF NOT EXISTS idx_reviews_professional        ON reviews(profession
 CREATE INDEX IF NOT EXISTS idx_email_otps_email            ON email_otps(email) ^^
 CREATE INDEX IF NOT EXISTS idx_contact_views_email_date    ON contact_views (viewer_email, viewed_at) ^^
 CREATE INDEX IF NOT EXISTS idx_contact_views_ip_date       ON contact_views (viewer_ip,    viewed_at) ^^
-
--- ============================================================
--- MIGRATIONS  (ADD COLUMN IF NOT EXISTS — idempotent)
--- ============================================================
-ALTER TABLE professionals ADD COLUMN IF NOT EXISTS latitude  DECIMAL(9,6) ^^
-ALTER TABLE professionals ADD COLUMN IF NOT EXISTS longitude DECIMAL(9,6) ^^
--- Unique phone constraint — safe to run multiple times via DO block
-DO $$ BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'professionals_phone_key' AND conrelid = 'professionals'::regclass
-  ) THEN
-    ALTER TABLE professionals ADD CONSTRAINT professionals_phone_key UNIQUE (phone);
-  END IF;
-END $$ ^^
 
 -- ============================================================
 -- FTS TRIGGER  (CREATE OR REPLACE — always idempotent)
