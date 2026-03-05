@@ -2,6 +2,7 @@ package com.proconnect.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.proconnect.dto.BookingDTO;
+import com.proconnect.dto.JobPostDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -84,5 +85,32 @@ public class BookingEventService {
         list.removeAll(dead);
         log.info("Pushed new-booking SSE event to {} connection(s) for professional {}",
                 list.size(), professionalId);
+    }
+
+    /** Push a broadcast job post event to a professional's active SSE connections. */
+    public void pushNewJob(Long professionalId, JobPostDTO job) {
+        List<SseEmitter> list = emitters.get(professionalId);
+        if (list == null || list.isEmpty()) return;
+
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(job);
+        } catch (IOException e) {
+            log.error("Failed to serialize JobPostDTO for SSE push", e);
+            return;
+        }
+
+        List<SseEmitter> dead = new CopyOnWriteArrayList<>();
+        for (SseEmitter emitter : list) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("new-job")
+                        .data(json));
+            } catch (IOException e) {
+                dead.add(emitter);
+            }
+        }
+        list.removeAll(dead);
+        log.info("Pushed new-job SSE event to {} connection(s) for professional {}", list.size(), professionalId);
     }
 }

@@ -264,4 +264,28 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
         @Param("category")         String  category,
         @Param("subcategoryNames") String  subcategoryNames
     );
+
+    /**
+     * Find available professionals within radiusKm whose primary category matches.
+     * Used by JobPostService to identify who to broadcast a new job post to.
+     */
+    @Query(nativeQuery = true, value = """
+        SELECT p.*
+        FROM   professionals p
+        LEFT JOIN categories cat ON cat.id = p.category_id
+        WHERE  p.is_available = true
+          AND  p.latitude  IS NOT NULL
+          AND  p.longitude IS NOT NULL
+          AND  LOWER(cat.name) = LOWER(:category)
+          AND  (6371 * acos(LEAST(1.0,
+                   cos(radians(CAST(:lat AS FLOAT8))) * cos(radians(CAST(p.latitude AS FLOAT8)))
+                   * cos(radians(CAST(p.longitude AS FLOAT8)) - radians(CAST(:lng AS FLOAT8)))
+                   + sin(radians(CAST(:lat AS FLOAT8))) * sin(radians(CAST(p.latitude AS FLOAT8)))
+               ))) < CAST(:radiusKm AS FLOAT8)
+        """)
+    List<Professional> findNearbyAvailableByCategory(
+            @Param("lat")       double  lat,
+            @Param("lng")       double  lng,
+            @Param("radiusKm")  int     radiusKm,
+            @Param("category")  String  category);
 }

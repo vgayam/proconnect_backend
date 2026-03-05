@@ -39,6 +39,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/reviews/token/**").permitAll()  // review submission
                 .requestMatchers(HttpMethod.GET,  "/api/professionals/*/reviews").permitAll() // public reviews
                 .requestMatchers(HttpMethod.POST, "/api/professionals").permitAll()   // public registration
+                .requestMatchers(HttpMethod.POST, "/api/jobs").permitAll()            // broadcast job post (guest)
                 .requestMatchers("/actuator/**").permitAll()
                 // Protected endpoints — require JWT
                 .anyRequest().authenticated()

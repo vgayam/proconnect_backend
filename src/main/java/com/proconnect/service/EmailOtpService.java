@@ -311,4 +311,79 @@ public class EmailOtpService {
             throw new RuntimeException("Failed to send verification email. Please try again.");
         }
     }
+
+    // ── Job Post emails ───────────────────────────────────────────────────────
+
+    /** Tell the customer their broadcast job was accepted by a professional. */
+    public void sendJobAcceptedToCustomer(String customerEmail, String customerName,
+                                          String proName, String proPhone, String proEmail) {
+        if (devMode) {
+            log.info("DEV MODE — job accepted email to customer={}, pro={}", customerEmail, proName);
+            return;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(fromAddress);
+            msg.setTo(customerEmail);
+            msg.setSubject("Your job request was accepted — ProConnect");
+            msg.setText("""
+                Hi %s,
+
+                Great news! A professional has accepted your job request.
+
+                Professional : %s
+                Phone        : %s
+                Email        : %s
+
+                They will contact you shortly to confirm the details.
+
+                — The ProConnect Team
+                """.formatted(
+                    customerName, proName,
+                    proPhone != null ? proPhone : "—",
+                    proEmail != null ? proEmail : "—"
+                ));
+            mailSender.send(msg);
+        } catch (Exception e) {
+            log.warn("Failed to send job-accepted email to {}: {}", customerEmail, e.getMessage());
+        }
+    }
+
+    /** Tell the professional they have been assigned a new broadcast job. */
+    public void sendJobAssignedToProfessional(String proEmail, String proName,
+                                              String customerName, String customerPhone,
+                                              String address, String description) {
+        if (devMode) {
+            log.info("DEV MODE — job assigned email to pro={}, customer={}", proEmail, customerName);
+            return;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(fromAddress);
+            msg.setTo(proEmail);
+            msg.setSubject("New job assigned to you — ProConnect");
+            msg.setText("""
+                Hi %s,
+
+                You have accepted a broadcast job on ProConnect!
+
+                Customer    : %s
+                Phone       : %s
+                Address     : %s
+                Description : %s
+
+                Please contact the customer to arrange the visit.
+
+                — The ProConnect Team
+                """.formatted(
+                    proName, customerName,
+                    customerPhone   != null ? customerPhone   : "—",
+                    address         != null ? address         : "—",
+                    description
+                ));
+            mailSender.send(msg);
+        } catch (Exception e) {
+            log.warn("Failed to send job-assigned email to {}: {}", proEmail, e.getMessage());
+        }
+    }
 }

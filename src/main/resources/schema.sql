@@ -238,6 +238,30 @@ ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS cancellation_token VARCHA
 ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS service_id BIGINT ^^
 
 -- ============================================================
+-- JOB POSTS  (broadcast bookings — separate from direct bookings)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS job_posts (
+    id               BIGSERIAL     PRIMARY KEY,
+    customer_name    VARCHAR(200)  NOT NULL,
+    customer_email   VARCHAR(200),
+    customer_phone   VARCHAR(30),
+    category         VARCHAR(100)  NOT NULL,
+    description      TEXT          NOT NULL,
+    address          VARCHAR(500),
+    lat              DOUBLE PRECISION,
+    lng              DOUBLE PRECISION,
+    radius_km        INTEGER       NOT NULL DEFAULT 5,
+    status           VARCHAR(20)   NOT NULL DEFAULT 'OPEN',
+    accepted_by_id   BIGINT,
+    expires_at       TIMESTAMP     NOT NULL,
+    created_at       TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+    version          INTEGER       NOT NULL DEFAULT 0,
+    FOREIGN KEY (accepted_by_id) REFERENCES professionals(id) ON DELETE SET NULL
+) ^^
+CREATE INDEX IF NOT EXISTS idx_job_posts_status  ON job_posts(status) ^^
+CREATE INDEX IF NOT EXISTS idx_job_posts_category ON job_posts(category) ^^
+
+-- ============================================================
 -- FTS TRIGGER  (CREATE OR REPLACE — always idempotent)
 -- ============================================================
 CREATE OR REPLACE FUNCTION professionals_search_vector_update() RETURNS trigger AS $$
