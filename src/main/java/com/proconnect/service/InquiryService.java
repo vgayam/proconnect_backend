@@ -41,6 +41,7 @@ public class InquiryService {
             .orElseThrow(() -> ResourceNotFoundException.professionalNotFound(professionalId));
 
         String token = UUID.randomUUID().toString().replace("-", "");
+        String cancellationToken = UUID.randomUUID().toString().replace("-", "");
 
         BookingInquiry inquiry = new BookingInquiry();
         inquiry.setProfessional(professional);
@@ -50,10 +51,12 @@ public class InquiryService {
         inquiry.setCustomerAddress(dto.getAddress());
         inquiry.setCustomerLat(dto.getCustomerLat());
         inquiry.setCustomerLng(dto.getCustomerLng());
+        inquiry.setServiceId(dto.getServiceId());
         inquiry.setPreferredDate(dto.getPreferredDate());
         inquiry.setPreferredTime(dto.getPreferredTime());
         inquiry.setNote(dto.getNote());
         inquiry.setReviewToken(token);
+        inquiry.setCancellationToken(cancellationToken);
         inquiry.setTokenUsed(false);
         inquiry.setTokenExpiresAt(LocalDateTime.now().plusDays(30));
 

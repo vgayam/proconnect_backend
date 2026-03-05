@@ -20,6 +20,8 @@ public class BookingDTO {
     private String note;
     private String status;
     private LocalDateTime createdAt;
+    private Long serviceId;
+    private String cancellationToken;
 
     public static BookingDTO from(BookingInquiry b) {
         BookingDTO dto = new BookingDTO();
@@ -35,6 +37,8 @@ public class BookingDTO {
         dto.note          = b.getNote();
         dto.status        = b.getStatus();
         dto.createdAt     = b.getCreatedAt();
+        dto.serviceId     = b.getServiceId();
+        dto.cancellationToken = b.getCancellationToken();
         return dto;
     }
 }

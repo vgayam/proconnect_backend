@@ -234,6 +234,8 @@ ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NU
 ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS customer_address VARCHAR(500) ^^
 ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS customer_lat DOUBLE PRECISION ^^
 ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS customer_lng DOUBLE PRECISION ^^
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS cancellation_token VARCHAR(64) UNIQUE ^^
+ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS service_id BIGINT ^^
 
 -- ============================================================
 -- FTS TRIGGER  (CREATE OR REPLACE — always idempotent)
@@ -241,12 +243,20 @@ ALTER TABLE booking_inquiries ADD COLUMN IF NOT EXISTS customer_lng DOUBLE PRECI
 CREATE OR REPLACE FUNCTION professionals_search_vector_update() RETURNS trigger AS $$
 DECLARE
     v_category_name TEXT;
+    v_service_titles TEXT;
 BEGIN
     SELECT name INTO v_category_name FROM categories WHERE id = NEW.category_id;
+    
+    -- Aggregate all service titles for this professional
+    SELECT string_agg(title, ' ') INTO v_service_titles 
+    FROM services 
+    WHERE professional_id = NEW.id;
+    
     NEW.search_vector :=
         setweight(to_tsvector('english', unaccent(coalesce(NEW.first_name,'') || ' ' || coalesce(NEW.last_name,''))), 'A') ||
         setweight(to_tsvector('english', unaccent(coalesce(NEW.headline,''))),                                        'A') ||
         setweight(to_tsvector('english', unaccent(coalesce(v_category_name,''))),                                     'B') ||
+        setweight(to_tsvector('english', unaccent(coalesce(v_service_titles,''))),                                    'B') ||
         setweight(to_tsvector('english', unaccent(coalesce(NEW.city,'') || ' ' || coalesce(NEW.state,'') || ' ' || coalesce(NEW.country,''))), 'B') ||
         setweight(to_tsvector('english', unaccent(coalesce(NEW.bio,''))),                                             'C');
     RETURN NEW;
@@ -257,6 +267,24 @@ DROP TRIGGER IF EXISTS trig_professionals_fts ON professionals ^^
 CREATE TRIGGER trig_professionals_fts
     BEFORE INSERT OR UPDATE ON professionals
     FOR EACH ROW EXECUTE FUNCTION professionals_search_vector_update() ^^
+
+-- Trigger to re-index professional when services change
+CREATE OR REPLACE FUNCTION services_reindex_professional() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        UPDATE professionals SET search_vector = search_vector WHERE id = OLD.professional_id;
+        RETURN OLD;
+    ELSE
+        UPDATE professionals SET search_vector = search_vector WHERE id = NEW.professional_id;
+        RETURN NEW;
+    END IF;
+END
+$$ LANGUAGE plpgsql ^^
+
+DROP TRIGGER IF EXISTS trig_services_reindex ON services ^^
+CREATE TRIGGER trig_services_reindex
+    AFTER INSERT OR UPDATE OR DELETE ON services
+    FOR EACH ROW EXECUTE FUNCTION services_reindex_professional() ^^
 
 -- ============================================================
 -- SLUG TRIGGER  (CREATE OR REPLACE — always idempotent)

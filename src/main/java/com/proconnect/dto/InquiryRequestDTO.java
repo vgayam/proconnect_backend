@@ -21,6 +21,9 @@ public class InquiryRequestDTO {
     private Double customerLat;
     private Double customerLng;
 
+    /** Optional: which service the booking is for */
+    private Long serviceId;
+
     /** Preferred 1-hour slot — e.g. "2026-03-10" and "14:00" */
     private String preferredDate;
     private String preferredTime;

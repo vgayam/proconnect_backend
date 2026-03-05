@@ -62,6 +62,12 @@ public class BookingInquiry {
     @Column(name = "review_token", nullable = false, unique = true, length = 64)
     private String reviewToken;
 
+    @Column(name = "cancellation_token", unique = true, length = 64)
+    private String cancellationToken;
+
+    @Column(name = "service_id")
+    private Long serviceId;
+
     @Column(name = "token_used", nullable = false)
     private boolean tokenUsed = false;
 

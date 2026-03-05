@@ -27,6 +27,9 @@ public class EmailOtpService {
     @Value("${app.mail.from:noreply@proconnect.in}")
     private String fromAddress;
 
+    @Value("${app.frontend.url:https://proconnect.in}")
+    private String frontendUrl;
+
     private static final SecureRandom RANDOM = new SecureRandom();
     /** OTP valid for 10 minutes */
     private static final int OTP_TTL_MINUTES = 10;
@@ -213,11 +216,19 @@ public class EmailOtpService {
 
     public void sendBookingStatusEmail(String clientEmail, String clientName,
                                         String professionalName, String slotLabel, String status) {
+        sendBookingStatusEmail(clientEmail, clientName, professionalName, slotLabel, status, null);
+    }
+
+    public void sendBookingStatusEmail(String clientEmail, String clientName,
+                                        String professionalName, String slotLabel, String status, String cancellationToken) {
         if (devMode) {
             log.info("DEV MODE — booking status email to client={}, status={}", clientEmail, status);
             return;
         }
         boolean accepted = "ACCEPTED".equals(status);
+        String cancelLink = (cancellationToken != null && accepted)
+            ? frontendUrl.stripTrailing().replaceAll("/+$", "") + "/booking/cancel/" + cancellationToken
+            : null;
         try {
             SimpleMailMessage msg = new SimpleMailMessage();
             msg.setFrom(fromAddress);
@@ -232,8 +243,11 @@ public class EmailOtpService {
 
                 They will contact you shortly to confirm the final details.
 
+                %s
+
                 — The ProConnect Team
-                """.formatted(clientName, professionalName, slotLabel)
+                """.formatted(clientName, professionalName, slotLabel,
+                    cancelLink != null ? "Need to cancel? Click here:\n" + cancelLink : "")
                 : """
                 Hi %s,
 
@@ -247,6 +261,31 @@ public class EmailOtpService {
             log.info("Booking status ({}) email sent to client {}", status, clientEmail);
         } catch (Exception e) {
             log.warn("Failed to send booking status email to {}: {}", clientEmail, e.getMessage());
+        }
+    }
+
+    public void sendBookingCancelledEmail(String professionalEmail, String professionalName,
+                                           String customerName, String slotLabel) {
+        if (devMode) {
+            log.info("DEV MODE — booking cancelled email to professional={}", professionalEmail);
+            return;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(fromAddress);
+            msg.setTo(professionalEmail);
+            msg.setSubject("Booking cancelled by customer — ProConnect");
+            msg.setText("""
+                Hi %s,
+
+                The customer %s has cancelled their booking for %s.
+
+                — The ProConnect Team
+                """.formatted(professionalName, customerName, slotLabel));
+            mailSender.send(msg);
+            log.info("Booking cancelled email sent to professional {}", professionalEmail);
+        } catch (Exception e) {
+            log.warn("Failed to send cancellation email to {}: {}", professionalEmail, e.getMessage());
         }
     }
 

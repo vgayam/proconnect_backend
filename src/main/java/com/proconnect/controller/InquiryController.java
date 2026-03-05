@@ -118,27 +118,67 @@ public class InquiryController {
             @RequestBody Map<String, String> body) {
 
         String status = body.get("status");
-        if (status == null || (!status.equals("ACCEPTED") && !status.equals("REJECTED"))) {
-            return ResponseEntity.badRequest().body(Map.of("message", "status must be ACCEPTED or REJECTED"));
+        if (status == null || (!status.equals("ACCEPTED") && !status.equals("REJECTED") && !status.equals("COMPLETED"))) {
+            return ResponseEntity.badRequest().body(Map.of("message", "status must be ACCEPTED, REJECTED, or COMPLETED"));
         }
         return bookingInquiryRepository.findById(id)
                 .map(b -> {
                     b.setStatus(status);
                     bookingInquiryRepository.save(b);
                     log.info("Booking {} marked as {}", id, status);
-                    // Notify the customer about the decision
+                    // Notify the customer based on the new status
                     if (b.getCustomerEmail() != null && !b.getCustomerEmail().isBlank()) {
                         String proName = b.getProfessional().getDisplayName() != null
                                 ? b.getProfessional().getDisplayName()
                                 : b.getProfessional().getFullName();
-                        String slot = (b.getPreferredDate() != null ? b.getPreferredDate() : "")
-                                + (b.getPreferredTime() != null ? " at " + b.getPreferredTime() : "");
-                        emailOtpService.sendBookingStatusEmail(
-                                b.getCustomerEmail(), b.getCustomerName(), proName, slot, status);
+                        if ("COMPLETED".equals(status)) {
+                            // Job done — send review request email automatically
+                            if (b.getReviewToken() != null) {
+                                String reviewLink = "https://proconnect.in/review/" + b.getReviewToken(); // TODO: use config
+                                emailOtpService.sendReviewRequestEmail(
+                                        b.getCustomerEmail(), proName, reviewLink);
+                            }
+                        } else if ("ACCEPTED".equals(status)) {
+                            // Booking accepted — send confirmation with cancellation link
+                            String slot = (b.getPreferredDate() != null ? b.getPreferredDate() : "")
+                                    + (b.getPreferredTime() != null ? " at " + b.getPreferredTime() : "");
+                            emailOtpService.sendBookingStatusEmail(
+                                    b.getCustomerEmail(), b.getCustomerName(), proName, slot, status, b.getCancellationToken());
+                        } else {
+                            // REJECTED — send standard rejection email
+                            String slot = (b.getPreferredDate() != null ? b.getPreferredDate() : "")
+                                    + (b.getPreferredTime() != null ? " at " + b.getPreferredTime() : "");
+                            emailOtpService.sendBookingStatusEmail(
+                                    b.getCustomerEmail(), b.getCustomerName(), proName, slot, status);
+                        }
                     }
                     return ResponseEntity.ok(BookingDTO.from(b));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /** Cancel booking via cancellation token (guest user) — POST /api/inquiries/cancel/{token} */
+    @PostMapping("/cancel/{token}")
+    public ResponseEntity<?> cancelBooking(@PathVariable String token) {
+        return bookingInquiryRepository.findByCancellationToken(token)
+                .map(b -> {
+                    if ("CANCELLED".equals(b.getStatus()) || "REJECTED".equals(b.getStatus()) || "COMPLETED".equals(b.getStatus())) {
+                        return ResponseEntity.badRequest().body(Map.of("message", "Booking is already " + b.getStatus()));
+                    }
+                    b.setStatus("CANCELLED");
+                    bookingInquiryRepository.save(b);
+                    log.info("Booking {} cancelled by user via token", b.getId());
+                    
+                    // Notify professional
+                    String proEmail = b.getProfessional().getEmail();
+                    String slot = (b.getPreferredDate() != null ? b.getPreferredDate() : "")
+                            + (b.getPreferredTime() != null ? " at " + b.getPreferredTime() : "");
+                    emailOtpService.sendBookingCancelledEmail(proEmail, b.getProfessional().getDisplayName(),
+                            b.getCustomerName(), slot);
+                    
+                    return ResponseEntity.ok(Map.of("message", "Booking cancelled successfully"));
+                })
+                .orElse(ResponseEntity.status(404).body(Map.of("message", "Invalid or expired cancellation link")));
     }
 
     /**
