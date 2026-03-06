@@ -58,8 +58,6 @@ public class BookingDTO {
     /**
      * Converts an accepted JobPost into a BookingDTO so it appears in the
      * pro's dashboard Booking Requests panel alongside direct bookings.
-     * Uses a negative id offset (-(jobPost.id)) to avoid collisions with
-     * BookingInquiry ids.
      */
     public static BookingDTO fromJobPost(JobPost j) {
         BookingDTO dto = new BookingDTO();

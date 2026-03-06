@@ -6,7 +6,8 @@ import com.proconnect.entity.Professional;
 import com.proconnect.repository.ProfessionalRepository;
 import com.proconnect.security.JwtService;
 import com.proconnect.service.EmailOtpService;
-import jakarta.servlet.http.Cookie;
+import com.proconnect.exception.ResourceNotFoundException;
+import com.proconnect.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,7 +77,7 @@ public class AuthController {
         }
 
         Professional professional = professionalRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new RuntimeException("Professional not found after OTP verification"));
+                .orElseThrow(() -> new ResourceNotFoundException("Professional not found after OTP verification"));
 
         String token = jwtService.generateToken(professional.getId());
         addTokenCookie(response, token);
@@ -90,11 +91,9 @@ public class AuthController {
      */
     @GetMapping("/me")
     public ResponseEntity<AuthResponseDTO> me(@AuthenticationPrincipal Long professionalId) {
+        if (professionalId == null) throw new UnauthorizedException("Not authenticated");
         Professional professional = professionalRepository.findById(professionalId)
-                .orElse(null);
-        if (professional == null) {
-            return ResponseEntity.status(401).build();
-        }
+                .orElseThrow(() -> new UnauthorizedException("Professional not found"));
         return ResponseEntity.ok(toAuthResponse(professional));
     }
 

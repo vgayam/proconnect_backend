@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -20,50 +21,66 @@ import java.util.List;
  * direct-booking (BookingInquiry) flow.
  *
  * Flow:
- *  1. Customer POSTs a job → saved as OPEN, SSE broadcast to all nearby pros
- *  2. Professional PATCHes /accept → optimistic lock ensures only one wins
- *  3. Customer gets an email, pro gets an email
+ *  1. Customer POSTs a job → saved as OPEN, broadcast to nearby pros after commit
+ *  2. Professional POSTs /accept → optimistic lock ensures only one wins
+ *  3. Customer and professional both receive an email
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class JobPostService {
 
-    private final JobPostRepository         jobPostRepository;
-    private final ProfessionalRepository    professionalRepository;
-    private final BookingEventService       bookingEventService;
-    private final EmailOtpService           emailOtpService;
-    private final JobPostPersistenceService jobPostPersistenceService;
+    private static final int EXPIRY_MINUTES = 30;
+
+    private final JobPostRepository      jobPostRepository;
+    private final ProfessionalRepository professionalRepository;
+    private final BookingEventService    bookingEventService;
+    private final EmailOtpService        emailOtpService;
 
     // ── Create ────────────────────────────────────────────────────────────────
 
     /**
-     * Public entry point — NOT @Transactional itself so the broadcast runs
-     * only AFTER the inner @Transactional saveJob() has fully committed.
-     * This prevents the race where a professional receives the SSE event and
-     * tries to accept the job before the DB row is visible.
+     * Public entry point — NOT @Transactional itself so the broadcast fires
+     * only AFTER persistJobPost() has fully committed.
+     * This prevents the race where a pro receives the SSE / poll event and
+     * tries to accept before the DB row is visible.
      */
     public JobPostDTO createJobPost(JobPostDTO.CreateRequest req) {
-        // 1. Persist inside a transaction that commits before we return
-        JobPost job = jobPostPersistenceService.save(req);
-
+        JobPost job = persistJobPost(req);   // commits its own transaction
         log.info("Job post committed id={} category={} lat={} lng={}",
                 job.getId(), job.getCategory(), job.getLat(), job.getLng());
-
-        // 2. Broadcast AFTER commit — job row is now visible to every reader
         int notified = broadcastToNearbyProfessionals(job);
-
         JobPostDTO dto = JobPostDTO.from(job);
         dto.setBroadcastCount(notified);
         return dto;
     }
 
-    // ── Poll (multi-server safe) ───────────────────────────────────────────────
+    /**
+     * Persists the job in its own REQUIRES_NEW transaction so it commits
+     * immediately, before the caller broadcasts.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public JobPost persistJobPost(JobPostDTO.CreateRequest req) {
+        JobPost job = new JobPost();
+        job.setCustomerName(req.getCustomerName());
+        job.setCustomerEmail(req.getCustomerEmail());
+        job.setCustomerPhone(req.getCustomerPhone());
+        job.setCategory(req.getCategory());
+        job.setDescription(req.getDescription());
+        job.setAddress(req.getAddress());
+        job.setLat(req.getLat());
+        job.setLng(req.getLng());
+        job.setRadiusKm(5);
+        job.setStatus("OPEN");
+        job.setExpiresAt(LocalDateTime.now().plusMinutes(EXPIRY_MINUTES));
+        return jobPostRepository.save(job);
+    }
+
+    // ── Poll (multi-server safe) ──────────────────────────────────────────────
 
     /**
      * Returns all OPEN, non-expired job posts near a professional's location
-     * matching their category. Called by GET /api/jobs/open on a poll interval.
-     * Works across multiple servers — reads straight from the DB.
+     * matching their category. Called every 10 s from the dashboard.
      */
     public List<JobPostDTO> getOpenJobsForProfessional(Long professionalId) {
         Professional pro = professionalRepository.findById(professionalId)
@@ -72,26 +89,22 @@ public class JobPostService {
         if (pro.getLatitude() == null || pro.getLongitude() == null || pro.getCategoryName() == null) {
             return List.of();
         }
-
         return jobPostRepository.pollOpenJobsNearProfessional(
-                pro.getLatitude().doubleValue(),
-                pro.getLongitude().doubleValue(),
-                5.0,
-                pro.getCategoryName())
-            .stream()
-            .map(JobPostDTO::from)
-            .toList();
+                        pro.getLatitude().doubleValue(),
+                        pro.getLongitude().doubleValue(),
+                        5.0,
+                        pro.getCategoryName())
+                .stream()
+                .map(JobPostDTO::from)
+                .toList();
     }
 
     // ── Accept (race-condition safe) ──────────────────────────────────────────
 
     /**
      * Professional accepts a job.
-     * Uses optimistic locking — if two pros accept simultaneously,
-     * only one succeeds; the other receives a 409.
-     *
-     * @throws OptimisticLockingFailureException if another pro already claimed it
-     * @throws IllegalStateException             if the job is no longer OPEN
+     * @throws OptimisticLockingFailureException if another pro claimed it concurrently
+     * @throws IllegalStateException             if the job is no longer OPEN or has expired
      */
     @Transactional
     public JobPostDTO acceptJob(Long jobId, Long professionalId) {
@@ -112,48 +125,33 @@ public class JobPostService {
 
         job.setStatus("ACCEPTED");
         job.setAcceptedBy(pro);
-        // @Version field increments automatically — concurrent save throws OptimisticLockingFailureException
-        jobPostRepository.save(job);
+        jobPostRepository.save(job);   // @Version bumps here; concurrent save → OptimisticLockingFailureException
 
         String proName = pro.getDisplayName() != null ? pro.getDisplayName() : pro.getFullName();
         log.info("Job post {} accepted by professional {} ({})", jobId, professionalId, proName);
 
-        // Notify the customer
         if (job.getCustomerEmail() != null && !job.getCustomerEmail().isBlank()) {
             emailOtpService.sendJobAcceptedToCustomer(
                     job.getCustomerEmail(), job.getCustomerName(), proName,
                     pro.getPhone(), pro.getEmail());
         }
-
-        // Notify the professional
         if (pro.getEmail() != null && !pro.getEmail().isBlank()) {
             emailOtpService.sendJobAssignedToProfessional(
                     pro.getEmail(), proName,
                     job.getCustomerName(), job.getCustomerPhone(), job.getAddress(), job.getDescription());
         }
-
         return JobPostDTO.from(job);
     }
 
     // ── SSE broadcast ─────────────────────────────────────────────────────────
 
-    /**
-     * Find all available professionals within the job's radius who match the
-     * category, then push an SSE "new-job" event to each one that is currently
-     * connected to the dashboard stream.
-     */
     private int broadcastToNearbyProfessionals(JobPost job) {
         if (job.getLat() == null || job.getLng() == null) return 0;
-
         List<Professional> nearby = professionalRepository.findNearbyAvailableByCategory(
                 job.getLat(), job.getLng(), job.getRadiusKm(), job.getCategory());
-
-        log.info("Broadcasting job {} to {} nearby professionals", job.getId(), nearby.size());
-
+        log.info("Broadcasting job {} to {} nearby professional(s)", job.getId(), nearby.size());
         JobPostDTO dto = JobPostDTO.from(job);
-        for (Professional pro : nearby) {
-            bookingEventService.pushNewJob(pro.getId(), dto);
-        }
+        nearby.forEach(pro -> bookingEventService.pushNewJob(pro.getId(), dto));
         return nearby.size();
     }
 }
