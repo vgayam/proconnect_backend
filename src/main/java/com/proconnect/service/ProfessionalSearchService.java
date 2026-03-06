@@ -57,6 +57,7 @@ public class ProfessionalSearchService {
         if (query != null && area == null) {
             Matcher m = LOCATION_SPLIT.matcher(query);
             if (m.matches()) {
+                // "java in indiranagar" → keyword="java", area="indiranagar"
                 String keyword = m.group(1).trim();
                 String hint    = m.group(2).trim();
                 List<String> matched = professionalRepository.findMatchingAreaName(hint);
@@ -66,7 +67,22 @@ public class ProfessionalSearchService {
                 } else {
                     log.info("Natural query '{}' → keyword='{}', area hint '{}' not found", query, keyword, hint);
                 }
-                query = keyword; // always strip the "in X" part from keyword search
+                query = keyword;
+            } else {
+                // Fallback: "java indiranagar" (no connector word) —
+                // try stripping the last 1..N words and checking if they match a known area.
+                String[] words = query.split("\\s+");
+                for (int i = words.length - 1; i >= 1; i--) {
+                    String trailingHint = String.join(" ", java.util.Arrays.copyOfRange(words, i, words.length));
+                    List<String> matched = professionalRepository.findMatchingAreaName(trailingHint);
+                    if (!matched.isEmpty()) {
+                        String remainingKeyword = String.join(" ", java.util.Arrays.copyOfRange(words, 0, i));
+                        log.info("Fallback split query '{}' → keyword='{}', area='{}'", query, remainingKeyword, matched.get(0));
+                        area  = matched.get(0);
+                        query = remainingKeyword.isBlank() ? null : remainingKeyword;
+                        break;
+                    }
+                }
             }
         }
 
