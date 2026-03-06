@@ -59,4 +59,7 @@ public interface JobPostRepository extends JpaRepository<JobPost, Long> {
             @Param("lng")       double lng,
             @Param("radiusKm")  double radiusKm,
             @Param("category")  String category);
+
+    /** All job posts accepted by a specific professional — shown in their booking dashboard. */
+    List<JobPost> findByAcceptedByIdOrderByCreatedAtDesc(Long professionalId);
 }

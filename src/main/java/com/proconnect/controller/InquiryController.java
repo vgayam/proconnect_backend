@@ -4,6 +4,7 @@ import com.proconnect.dto.BookingDTO;
 import com.proconnect.dto.InquiryRequestDTO;
 import com.proconnect.dto.InquiryResponseDTO;
 import com.proconnect.repository.BookingInquiryRepository;
+import com.proconnect.repository.JobPostRepository;
 import com.proconnect.service.BookingEventService;
 import com.proconnect.service.EmailOtpService;
 import com.proconnect.service.InquiryService;
@@ -27,6 +28,7 @@ public class InquiryController {
 
     private final InquiryService inquiryService;
     private final BookingInquiryRepository bookingInquiryRepository;
+    private final JobPostRepository jobPostRepository;
     private final EmailOtpService emailOtpService;
     private final BookingEventService bookingEventService;
 
@@ -99,15 +101,28 @@ public class InquiryController {
         return ResponseEntity.ok(response);
     }
 
-    /** Returns all booking inquiries for a professional (used by the dashboard). */
+    /** Returns all booking inquiries + accepted broadcast jobs for a professional (used by the dashboard). */
     @GetMapping("/professionals/{professionalId}")
     public ResponseEntity<List<BookingDTO>> getInquiries(@PathVariable Long professionalId) {
         log.info("GET /api/inquiries/professionals/{}", professionalId);
+
         List<BookingDTO> inquiries = bookingInquiryRepository
                 .findByProfessionalId(professionalId)
                 .stream()
                 .map(BookingDTO::from)
-                .toList();
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+
+        // Also include broadcast jobs this professional has accepted
+        jobPostRepository.findByAcceptedByIdOrderByCreatedAtDesc(professionalId)
+                .stream()
+                .map(BookingDTO::fromJobPost)
+                .forEach(inquiries::add);
+
+        // Sort combined list newest-first
+        inquiries.sort(java.util.Comparator.comparing(
+                BookingDTO::getCreatedAt,
+                java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+
         return ResponseEntity.ok(inquiries);
     }
 
