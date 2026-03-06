@@ -22,6 +22,9 @@ public class JobPostDTO {
     /** Accepted professional name — only shown after acceptance */
     private String acceptedByName;
 
+    /** How many professionals were notified via SSE (populated on create only) */
+    private int broadcastCount;
+
     public static JobPostDTO from(JobPost j) {
         JobPostDTO dto = new JobPostDTO();
         dto.id           = j.getId();

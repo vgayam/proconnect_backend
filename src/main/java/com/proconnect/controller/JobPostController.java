@@ -48,6 +48,13 @@ public class JobPostController {
         }
         log.info("POST /api/jobs — customer={} category={}", req.getCustomerName(), req.getCategory());
         JobPostDTO result = jobPostService.createJobPost(req);
+
+        if (result.getBroadcastCount() == 0) {
+            return ResponseEntity.status(404).body(Map.of(
+                "message", "No " + req.getCategory() + " professionals found near your location. Try again later or expand your search."
+            ));
+        }
+
         return ResponseEntity.ok(result);
     }
 

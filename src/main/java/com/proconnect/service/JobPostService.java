@@ -58,9 +58,11 @@ public class JobPostService {
                 job.getId(), job.getCategory(), job.getLat(), job.getLng());
 
         // Broadcast SSE to all matching nearby professionals
-        broadcastToNearbyProfessionals(job);
+        int notified = broadcastToNearbyProfessionals(job);
 
-        return JobPostDTO.from(job);
+        JobPostDTO dto = JobPostDTO.from(job);
+        dto.setBroadcastCount(notified);
+        return dto;
     }
 
     // ── Accept (race-condition safe) ──────────────────────────────────────────
@@ -122,8 +124,8 @@ public class JobPostService {
      * category, then push an SSE "new-job" event to each one that is currently
      * connected to the dashboard stream.
      */
-    private void broadcastToNearbyProfessionals(JobPost job) {
-        if (job.getLat() == null || job.getLng() == null) return;
+    private int broadcastToNearbyProfessionals(JobPost job) {
+        if (job.getLat() == null || job.getLng() == null) return 0;
 
         List<Professional> nearby = professionalRepository.findNearbyAvailableByCategory(
                 job.getLat(), job.getLng(), job.getRadiusKm(), job.getCategory());
@@ -134,5 +136,6 @@ public class JobPostService {
         for (Professional pro : nearby) {
             bookingEventService.pushNewJob(pro.getId(), dto);
         }
+        return nearby.size();
     }
 }
