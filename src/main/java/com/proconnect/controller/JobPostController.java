@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -57,6 +58,20 @@ public class JobPostController {
         }
 
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Professional polls for open broadcast jobs near their location.
+     * Called every ~10s from the dashboard — multi-server safe (reads from DB).
+     */
+    @GetMapping("/open")
+    public ResponseEntity<List<JobPostDTO>> getOpenJobs(
+            @AuthenticationPrincipal Long professionalId) {
+
+        if (professionalId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(jobPostService.getOpenJobsForProfessional(professionalId));
     }
 
     /**

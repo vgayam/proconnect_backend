@@ -58,6 +58,31 @@ public class JobPostService {
         return dto;
     }
 
+    // ── Poll (multi-server safe) ───────────────────────────────────────────────
+
+    /**
+     * Returns all OPEN, non-expired job posts near a professional's location
+     * matching their category. Called by GET /api/jobs/open on a poll interval.
+     * Works across multiple servers — reads straight from the DB.
+     */
+    public List<JobPostDTO> getOpenJobsForProfessional(Long professionalId) {
+        Professional pro = professionalRepository.findById(professionalId)
+                .orElseThrow(() -> ResourceNotFoundException.professionalNotFound(professionalId));
+
+        if (pro.getLatitude() == null || pro.getLongitude() == null || pro.getCategoryName() == null) {
+            return List.of();
+        }
+
+        return jobPostRepository.pollOpenJobsNearProfessional(
+                pro.getLatitude().doubleValue(),
+                pro.getLongitude().doubleValue(),
+                5.0,
+                pro.getCategoryName())
+            .stream()
+            .map(JobPostDTO::from)
+            .toList();
+    }
+
     // ── Accept (race-condition safe) ──────────────────────────────────────────
 
     /**
