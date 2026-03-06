@@ -29,35 +29,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobPostService {
 
-    private static final int EXPIRY_MINUTES = 30;
-
-    private final JobPostRepository       jobPostRepository;
-    private final ProfessionalRepository  professionalRepository;
-    private final BookingEventService     bookingEventService;
-    private final EmailOtpService         emailOtpService;
+    private final JobPostRepository         jobPostRepository;
+    private final ProfessionalRepository    professionalRepository;
+    private final BookingEventService       bookingEventService;
+    private final EmailOtpService           emailOtpService;
+    private final JobPostPersistenceService jobPostPersistenceService;
 
     // ── Create ────────────────────────────────────────────────────────────────
 
-    @Transactional
+    /**
+     * Public entry point — NOT @Transactional itself so the broadcast runs
+     * only AFTER the inner @Transactional saveJob() has fully committed.
+     * This prevents the race where a professional receives the SSE event and
+     * tries to accept the job before the DB row is visible.
+     */
     public JobPostDTO createJobPost(JobPostDTO.CreateRequest req) {
-        JobPost job = new JobPost();
-        job.setCustomerName(req.getCustomerName());
-        job.setCustomerEmail(req.getCustomerEmail());
-        job.setCustomerPhone(req.getCustomerPhone());
-        job.setCategory(req.getCategory());
-        job.setDescription(req.getDescription());
-        job.setAddress(req.getAddress());
-        job.setLat(req.getLat());
-        job.setLng(req.getLng());
-        job.setRadiusKm(5);
-        job.setStatus("OPEN");
-        job.setExpiresAt(LocalDateTime.now().plusMinutes(EXPIRY_MINUTES));
-        jobPostRepository.save(job);
+        // 1. Persist inside a transaction that commits before we return
+        JobPost job = jobPostPersistenceService.save(req);
 
-        log.info("Job post created id={} category={} lat={} lng={}",
+        log.info("Job post committed id={} category={} lat={} lng={}",
                 job.getId(), job.getCategory(), job.getLat(), job.getLng());
 
-        // Broadcast SSE to all matching nearby professionals
+        // 2. Broadcast AFTER commit — job row is now visible to every reader
         int notified = broadcastToNearbyProfessionals(job);
 
         JobPostDTO dto = JobPostDTO.from(job);
