@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -59,17 +60,17 @@ public class JobPostController {
     }
 
     /**
-     * Professional accepts a broadcast job (requires JWT — authenticated endpoint).
+     * Professional accepts a broadcast job.
+     * professionalId is taken directly from the JWT principal — no body needed.
      * Uses optimistic locking to prevent duplicate acceptance.
      */
     @PostMapping("/{id}/accept")
     public ResponseEntity<?> acceptJob(
             @PathVariable Long id,
-            @RequestBody Map<String, Long> body) {
+            @AuthenticationPrincipal Long professionalId) {
 
-        Long professionalId = body.get("professionalId");
         if (professionalId == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "professionalId is required"));
+            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
         }
         log.info("POST /api/jobs/{}/accept — professionalId={}", id, professionalId);
         try {
