@@ -62,7 +62,7 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
               OR similarity(:query, coalesce(p.bio,''))   > 0.2
               OR similarity(:query, coalesce(sc.name,'')) > 0.25
           )
-          AND (:city             IS NULL OR :city    = '' OR similarity(:city,   p.city)   > 0.3)
+          AND (:city             IS NULL OR :city    = '' OR similarity(LOWER(:city), LOWER(p.city)) > 0.2)
           AND (:state            IS NULL OR :state   = '' OR LOWER(p.state)   = LOWER(:state))
           AND (:country          IS NULL OR :country = '' OR LOWER(p.country) = LOWER(:country))
           AND (:remote           IS NULL OR p.remote       = :remote)
@@ -119,7 +119,7 @@ public interface ProfessionalRepository extends JpaRepository<Professional, Long
                 OR similarity(:query, coalesce(p.bio,''))    > 0.2
                 OR similarity(:query, coalesce(sc.name,''))  > 0.25
             )
-            AND (:city              IS NULL OR :city     = '' OR similarity(:city,  p.city)   > 0.3)
+            AND (:city              IS NULL OR :city     = '' OR similarity(LOWER(:city), LOWER(p.city)) > 0.2)
             AND (:state             IS NULL OR :state    = '' OR LOWER(p.state)    = LOWER(:state))
             AND (:country           IS NULL OR :country  = '' OR LOWER(p.country)  = LOWER(:country))
             AND (:remote            IS NULL OR p.remote            = :remote)
