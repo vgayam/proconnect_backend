@@ -29,6 +29,15 @@ public class ProfessionalSearchService {
     private static final Pattern LOCATION_SPLIT =
         Pattern.compile("^(.+?)\\s+(?:in|near|at|around)\\s+(.+)$", Pattern.CASE_INSENSITIVE);
 
+    /** Normalise common city aliases to the canonical name stored in the DB */
+    private static final Map<String, String> CITY_ALIASES = Map.of(
+        "bangalore",  "Bengaluru",
+        "bombay",     "Mumbai",
+        "madras",     "Chennai",
+        "calcutta",   "Kolkata",
+        "poona",      "Pune"
+    );
+
     public SearchResultDTO search(ProfessionalSearchCriteria criteria) {
         int page     = Math.max(0, criteria.getPage());
         int pageSize = criteria.getPageSize() > 0 ? criteria.getPageSize() : 10;
@@ -45,6 +54,10 @@ public class ProfessionalSearchService {
         // ── Standard text / city / area path (lat/lng applied as additive HAVING filter) ──
         String query    = blankNull(criteria.getQuery());
         String city     = blankNull(criteria.getCity());
+        // Normalise legacy city aliases e.g. "Bangalore" → "Bengaluru"
+        if (city != null) {
+            city = CITY_ALIASES.getOrDefault(city.toLowerCase(), city);
+        }
         String state    = blankNull(criteria.getState());
         String country  = blankNull(criteria.getCountry());
         String category = criteria.hasCategoriesFilter() ? criteria.getCategories().get(0) : null;
